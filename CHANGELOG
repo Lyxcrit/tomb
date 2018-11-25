@@ -1,0 +1,33 @@
+#Changelog
+All notable changes to this project will be documented in this file.
+
+##[Current Version: 1.0.1]
+
+##[Version 1.0.1]
+### Changed
+- Updated logic within Tomb.ps1 to fix an issue with passing parameters from this script to the additional modules
+- Cleaned up formatting of scripts for readability and a cleaner look
+
+### Added
+- Error log now outputs the $Error.Message without the extra details and clutter
+- Changelog file for up to date changes on the current Version
+- Versioning to each script for easier change management
+- Comment blocks to each block to describe to user what each block does
+
+### Changed
+- Modules should now execute as an invoke-command giving saving resources on localhost
+- Fixed typos within scripts
+
+## Fixes
+- Fixed an issue that caused modules to run more than once against the same machine
+
+## Future Improvements
+- Add debug messages to scripts
+- Clean up directory in an effort to keep it minimalistic
+- Move breakdown to a module
+- Improve script to run as threaded to limit the ammount of concurrent jobs that run at once
+- Move documentation over to Confluence 
+
+=========================================================================================================================
+##[Previous Changes]
+- Will be provided below for future updates

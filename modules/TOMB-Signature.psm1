@@ -9,8 +9,8 @@
     Incase you break the script there is an original located under 'TOMB\modules\backup'
 
     .NOTES
-    DATE:       1 OCT 18
-    VERSION:    1.0
+    DATE:       23 NOV 18
+    VERSION:    1.0.1
     AUTHOR:     Brent Matlock
     
     .EXAMPLE
@@ -22,39 +22,43 @@
 
 #>
 
-
+#Main Script, collects Signatures off hosts and converts the output to Json format in preperation to send to Splunk
 Function TOMB-Signature {
-   Param(
-   [Parameter(Mandatory=$false, ValueFromPipeline=$true)][System.Array]$Computer,
-   [Parameter(Mandatory=$false)][string[]]$Path )
-        If ( $Computer -EQ $null ){ $Computer = $( Get-Content .\includes\tmp\DomainList.txt )}
-        If ( $Path -EQ "" -OR $Path -EQ "Default" -OR $Path -EQ "default" ){
-            $FileDirectory = $( Get-ChildItem -File "C:\Windows\System32\*.dll" )   #DO NOT CHANGE, This is the default folder. Include additional Folders below
-            Foreach ($File in [array]$FileDirectory){
+    Param(
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true)][System.Array]$Computer,
+        [Parameter(Mandatory = $false)][string[]]$Path )
+    If ( $Computer -EQ $null ) { $Computer = $( Get-Content .\includes\tmp\DomainList.txt )}
+    If ( $Path -EQ "" -OR $Path -EQ "Default" -OR $Path -EQ "default" ) {
+        $FileDirectory = $( Get-ChildItem -File "C:\Windows\System32\*.dll" )   #DO NOT CHANGE, This is the default folder. Include additional Folders below
+        Foreach ($File in [array]$FileDirectory) {
+            $Signature = $(( Get-AuthenticodeSignature "$File").SignerCertificate.Subject )
+            $FileVersion = $( Get-ChildItem $File | Foreach-Object { "{0}" -f [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_).FileVersion } )
+            Try {
+                "{ File: " + $File, 
+                "; Signature:" + $Signature,
+                "; FileVersion:" + $FileVersion `
+                    | Out-File -FilePath .\Files2Forward\"$Computer"_Signatures_System32.json -Append 
+            } 
+            Catch { $Error[0] | Out-File -FilePath .\logs\ErrorLog\signatures.log }
+        }
+    }
+    Else { 
+        Foreach ( $Folder in [array]$Path ) {
+            $File = ( Get-ChildItem $Folder )
+            Foreach ( $File in $Folder ) {
                 $Signature = $(( Get-AuthenticodeSignature "$File").SignerCertificate.Subject )
-                $FileVersion = $( Get-ChildItem $File | Foreach-Object { "{0}" -f [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_).FileVersion } )
-                    Try{ "{ File: "+$File, 
-                         "; Signature:"+$Signature,
-                         "; FileVersion:"+$FileVersion `
-                         | Out-File -FilePath .\Files2Forward\"$Computer"_Signatures_System32.json -Append } 
-                    Catch{ $Error[0] | Out-File -FilePath .\logs\ErrorLog\signatures.log }
+                $FileVersion = $( Get-ChildItem $File | ForEach-Object { "{0}" -f [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_).FileVersion } )
+                Try {
+                    "{ File: " + $File, 
+                    "; Signature: " + $Signature, 
+                    "; FileVersion: " + $FileVersion `
+                        | Out-File -FilePath .\Files2Forward\"$Computer"_Signatures_"$Folder".json -Append 
                 }
-            }
-        Else { 
-            Foreach ( $Folder in [array]$Path ){
-                $File = ( Get-ChildItem $Folder )
-                Foreach ( $File in $Folder ){
-                    $Signature = $(( Get-AuthenticodeSignature "$File").SignerCertificate.Subject )
-                    $FileVersion = $( Get-ChildItem $File | ForEach-Object { "{0}" -f [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_).FileVersion } )
-                        Try{ "{ File: "+$File, 
-                             "; Signature: "+$Signature, 
-                             "; FileVersion: "+$FileVersion `
-                             | Out-File -FilePath .\Files2Forward\"$Computer"_Signatures_"$Folder".json -Append }
-                        Catch { $Error[0] | Out-File -FilePath .\logs\ErrorLog\signatures.log } 
-                }
+                Catch { $Error[0] | Out-File -FilePath .\logs\ErrorLog\signatures.log } 
             }
         }
     }
+}
 
 
 #Alias registration for deploying with -Collects parameter via TOMB.ps1

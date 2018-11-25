@@ -1,0 +1,23 @@
+ ___________  ______   ___      ___  _______   
+("     _   ")/    " \ |"  \    /"  ||   _  "\  
+ )__/  \\__/// ____  \ \   \  //   |(. |_)  :) 
+    \\_ /  /  /    ) :)/\\  \/.    ||:     \/  
+    |.  | (: (____/ //|: \.        |(|  _  \\  
+    \:  |  \        / |.  \    /:  ||: |_)  :) 
+     \__|   \"_____/  |___|\__/|___|(_______/ 
+
+README
+    The One Mission Builder (TOMB) is a project used to aid in the collection of artifacts for forwarding into Splunk via SplunkUniversalForwarder.
+    TOMB uses WMI calls against either single host, or a Domain. Modules can be ran via TOMB.ps1 or by themselves once you import the module you wish to use.
+    TOMB utilizes a build and breakdown method which is used in an effort to keep hosts resources free, and avoid overloading of the PSModule.
+
+AUTHORS
+    Brent Matlock - Lyx
+
+CONTACT
+    If you have a problem, questions, ideas or suggestions, please contact us by email:
+    Brent.W.Matlock.mil@mail.mil
+
+WEBSITE
+    https://bitbucket.di2e.net/projects/EUCOMCPT/repos/tomb/browse
+
