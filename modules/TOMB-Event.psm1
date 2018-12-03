@@ -1,47 +1,56 @@
 ﻿<#
     .SYNOPSIS
-    Collects Windows Logs on the Host. Modular loaded via TOMB or TOMB_GUI. In an attempt to make this easier an InstanceId is provided and all 3 log types are searched.
+    Collects Windows Logs on the Host. Modular loaded via TOMB.ps1.
              
      .DESCRIPTION
-    Used to pull Event logs from host such as EventID 4624 (Successful Logon) or EventID 4625 (Failed Logon) via WMI (Windows Management Instrumentation) Calls.
-    Module will allow any logs to be collected, as long as user has permissions to pull those logs. Timestamps are present inside 'TOMB\modules\eventlogs\tmp'
-    preventing the ability to prevent pulling the same log multiple times and ensure each pull presents you with new data. 
+    Used to pull Event logs from host such as EventCode 4624 (Successful Logon) or EventCode 4625 (Failed Logon) via WMI (Windows Management Instrumentation) Calls.
+    Module will allow any logs to be collected, as long as user has permissions to pull those logs. RecordNumbers are saved inside 'TOMB\modules\DO_NOT_DELETE\' on
+    a per machine per EventCode basis, preventing the pulling of same log multiple times and ensure each pull presents you with new data. 
 
     .NOTES
-    DATE:       23 NOV 18
-    VERSION:    1.0.1
+    DATE:       03 DEC 18
+    VERSION:    1.0.2
     AUTHOR:     Brent Matlock
+
+    .PARAMETER Computer
+    Used to specify list of computers to collect against, if not provided then hosts are pulled from .\includes\tmp\DomainList.txt
+
+    .PARAMETER LogID
+    Used to specify list of EventID to collect against, if not provided default list activates. 
+    Modification of the defaults is provided under the '#Used to fill null parameters with 'Default' settings"
 
     .EXAMPLE 
     Will Return Successful logins and logouts for localhost
-        TOMB-LogFiles -computerName $env:COMPUTERNAME -log_id 4624,4625
+        TOMB-LogEventLog -Computer $env:COMPUTERNAME -LogID 4624,4625
 #>
 
 #Main Script, collects Eventlogs off hosts and converts the output to Json format in preperation to send to Splunk
 Function TOMB-EventLog {
-    Param( 
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)][System.Array]$Computer,
-        [Parameter(Mandatory = $false, ValueFromPipeline = $true)][System.Array]$LogID,
+    Param(
+        [Parameter(Mandatory, ValueFromPipeline = $true)][string[]]$Computer,
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true)][String[]]$LogID,
         [Parameter(Mandatory = $false)][string]$AD )
-    #Used to fill null parameters, setup as Default settings
-    If ($Computer -eq $null) { $Computer = $( Get-Content .\includes\tmp\DomainList.txt ) }
-    If ($LogID -eq $null) { $LogID = 4624, 4625, 1100, 1102 }
-    #Logic for Collection
-    Foreach ($Machine in $Computer) {
-        #Verify if Timestamp exists, if not sets the date to Current-30Days
-        $LastRun = $( Get-Content -Path .\modules\DO_NOT_DELETE\"$Machine"_"$LogID"_timestamp.log -ErrorVariable $TimeStamp_Missing -ErrorAction SilentlyContinue )  
-        [DateTime]$TimeStamp_Missing = $($LastRun = (Get-Date).AddDays(-30).ToString()) 
-        Foreach ($Log in $LogID) {
-            #Logic branch for each provided log entry, LogID is checked against all 3 Eventlog types "Application, System, Security"
-            [System.Array]$EventLogs = $( Invoke-Command { "Application", "Security", "System" | Foreach-Object { Get-EventLog -LogName $_ -After $LastRun | Where-Object EventId -eq $Log } } -ComputerName $Machine$AD) 
-            Foreach ($item in $EventLogs) {
-                Try { ConvertTo-Json20 -item $item | Out-File -FilePath ."$Machine"_"$Log"_eventlogs.json -Append }
-                Catch { $Error.Message | Out-File -FilePath .\logs\ErrorLog\windowslogs.log -Append }
+    #Used to fill null parameters with "Default" settings
+    If ($null -eq $Computer) { $Computer = Get-Content .\includes\tmp\DomainList.txt }
+    If ($null -eq $LogID) { $LogID = 4624, 4625, 1100, 1102 }
+    foreach ($Machine in $Computer) {
+        foreach ($Log in $LogID) {
+            #Verify that Timestamp exists, if not found sets date to Current-30Days
+            $LastRun = (Get-Content -Path ".\modules\DO_NOT_DELETE\${Machine}_${Log}_timestamp.log" -ErrorAction SilentlyContinue)
+            If ($LastRun.Length -eq 0) { $LastRun = 1 }
+            $EventLog = "Get-WmiObject Win32_NTLogEvent -Filter 'EventCode=$Log and (RecordNumber > $LastRun)'" 
+            $EventLogs = [Scriptblock]::Create($EventLog)
+            $EventLogFinal = Invoke-Command -ComputerName $Machine -ScriptBlock $EventLogs -ArgumentList $Log, $LastRun
+            Try {
+                $EventLogFinal | ConvertTo-Json | Out-File -FilePath .\Files2Forward\${Machine}_${Log}_logs.json -Append
+                $EventLogFinal.RecordNumber[0]  | Out-File -FilePath .\modules\DO_NOT_DELETE\${Machine}_${Log}_timestamp.log 
             }
-            $TimeStamp_Generation = ( Get-Date | Out-File -FilePath .\modules\DO_NOT_DELETE\"$Machine"_"$Log"_timestamp.log ); $TimeStamp_Generation
+            Catch { $_.Exception.Message | Out-File -FilePath .\logs\ErrorLog\windowslogs.log -Append }
         }
     }
 }
+
+
 
 #Legacy Script, used in order to create a "Mock" json format. 
 Function TOMB-EventLog-Mock {

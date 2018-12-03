@@ -1,8 +1,37 @@
 #Changelog
 All notable changes to this project will be documented in this file.
 
-##[Current Version: 1.0.1]
+##[Current Version: 1.0.2]
 
+##[Version 1.0.2]
+### Changed
+- Changed PowerShell 2.0 Convertto-Json20 to use standard Convertto-Json standard with Powershell 3.0
+- Changed the way TOMB-EventLog logic works, should be smoother now with no overlap resulting in logs being pulled more than once. 
+
+### Added
+- Hostname to IP Address module, used to forward into Splunk as a lookup table for inhouse correlations. 
+- Modules will now properly execute on remote hosts via the Invoke-Command, discover the network.
+
+### Changed
+- Modules should now execute as an invoke-command giving saving resources on localhost.
+- Fixed typos within scripts. Taking donations for spelling lessons. 
+
+## Fixes
+- Fixed an issue where TOMB-EventLog TimeWritten comparison was not working due to String vs DateTime, 
+  RecordNumber is now used in its place
+
+## Future Improvements (TODO)
+- Add debug messages to scripts
+- Clean up directory in an effort to keep it minimalistic
+- Move breakdown to a module
+- Improve script to run as threaded to limit the ammount of concurrent jobs that run at once
+- Move documentation over to Confluence
+- Convert TOMB-Registry to utilize the Invoke-Command for remote collection
+- Create Sha1/Md5 Powershell 2.0 compliant function for TOMB-Signature 
+- Fix ConvertTo-Json20 to work when object is not an array.
+
+=========================================================================================================================
+##[Previous Changes]
 ##[Version 1.0.1]
 ### Changed
 - Updated logic within Tomb.ps1 to fix an issue with passing parameters from this script to the additional modules
@@ -20,14 +49,3 @@ All notable changes to this project will be documented in this file.
 
 ## Fixes
 - Fixed an issue that caused modules to run more than once against the same machine
-
-## Future Improvements
-- Add debug messages to scripts
-- Clean up directory in an effort to keep it minimalistic
-- Move breakdown to a module
-- Improve script to run as threaded to limit the ammount of concurrent jobs that run at once
-- Move documentation over to Confluence 
-
-=========================================================================================================================
-##[Previous Changes]
-- Will be provided below for future updates

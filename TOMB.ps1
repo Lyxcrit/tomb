@@ -9,8 +9,8 @@
     **For SplunkForwarder setup please read the provided documentation or use the provided Splunk_Setup.ps1 for automated setup.**
     
     .NOTES
-    DATE:       23 NOV 18
-    VERSION:    1.0.1
+    DATE:       03 DEC 18
+    VERSION:    1.0.2
     AUTHOR:     Brent Matlock
 
     .PARAMETER Domain
@@ -70,13 +70,13 @@ Function Main {
     #Gathering Domain Computers list if -Domain AND -Server are provided, typically used when NOT domain joined or using DNS
     If ($Domain -and $Server) {
         $Domain_Computers = $( Get-ADComputer -Filter * -Properties Name, DistinguishedName -Server $Server -SearchBase $Domain | Select-Object DNSHostName )
-        Foreach ($Hostx in $Domain_Computers) { ( $Hostx -replace "@{Name=", "" ) -replace "}", "" | Out-File -FilePath .\includes\tmp\DomainList.txt -Append}
+        Foreach ($Hostx in $Domain_Computers) { ( $Hostx -replace "@{DNSHostName=", "" ) -replace "}", "" | Out-File -FilePath .\includes\tmp\DomainList.txt -Append}
         Collects
     }
     #Gathering Domain computers list if -Domain is provided without the -Server parameter, typically used with domain joined or using DNS
     If ($Domain -and ($Server -eq "")) {
         $Domain_Computers = $( Get-ADComputer -Filter * -Properties Name, DistinguishedName -SearchBase $Domain | Select-Object DNSHostName )
-        Foreach ($Hostx in $Domain_Computers) { ( $Hostx -replace "@{Name=", "" ) -replace "}", "" | Out-File -FilePath .\includes\tmp\DomainList.txt -Append}
+        Foreach ($Hostx in $Domain_Computers) { ( $Hostx -replace "@{DNSHostName=", "" ) -replace "}", "" | Out-File -FilePath .\includes\tmp\DomainList.txt -Append}
         Collects
     }
     If ($Computer) {
@@ -97,4 +97,4 @@ Function Collects {
 }
 
 Main
-Breakdown
+#Breakdown

@@ -9,8 +9,8 @@
     Incase you break the script there is an original located under 'TOMB\modules\backup'
 
     .NOTES
-    DATE:       23 NOV 18
-    VERSION:    1.0.1
+    DATE:       03 DEC 18
+    VERSION:    1.0.2
     AUTHOR:     Brent Matlock
     
     .EXAMPLE
@@ -27,32 +27,34 @@ Function TOMB-Signature {
     Param(
         [Parameter(Mandatory = $false, ValueFromPipeline = $true)][System.Array]$Computer,
         [Parameter(Mandatory = $false)][string[]]$Path )
-    If ( $Computer -EQ $null ) { $Computer = $( Get-Content .\includes\tmp\DomainList.txt )}
-    If ( $Path -EQ "" -OR $Path -EQ "Default" -OR $Path -EQ "default" ) {
+    If ( $Computer -eq $null ) { $Computer = $( Get-Content .\includes\tmp\DomainList.txt )}
+    If ( $Path -eq $null ) {
         $FileDirectory = $( Get-ChildItem -File "C:\Windows\System32\*.dll" )   #DO NOT CHANGE, This is the default folder. Include additional Folders below
-        Foreach ($File in [array]$FileDirectory) {
+        Foreach ($File in $FileDirectory) {
             $Signature = $(( Get-AuthenticodeSignature "$File").SignerCertificate.Subject )
-            $FileVersion = $( Get-ChildItem $File | Foreach-Object { "{0}" -f [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_).FileVersion } )
+            $Sha1 = Get-FileHash -a SHA1 $File
+            $Sha1 = $Sha1.Hash 
+            $MD5 = Get-FileHash -a MD5 $File
+            $MD5 = $MD5.Hash
+            $File = $( Get-ChildItem $File | Foreach-Object { "{0}" -f [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_).FileVersion } )
             Try {
-                "{ File: " + $File, 
-                "; Signature:" + $Signature,
-                "; FileVersion:" + $FileVersion `
-                    | Out-File -FilePath .\Files2Forward\"$Computer"_Signatures_System32.json -Append 
+            "{ File : ${File} , Signature : ${Signature} , Sha1 : ${Sha1} , MD5 : ${MD5}" | Out-File -FilePath .\Files2Forward\${Computer}_Signatures_System32.json -Append 
             } 
             Catch { $Error[0] | Out-File -FilePath .\logs\ErrorLog\signatures.log }
         }
     }
     Else { 
-        Foreach ( $Folder in [array]$Path ) {
-            $File = ( Get-ChildItem $Folder )
-            Foreach ( $File in $Folder ) {
+        Foreach ( $Folder in $Path ) {
+            $Files = ( Get-ChildItem $Folder )
+            Foreach ( $File in $Files ) {
                 $Signature = $(( Get-AuthenticodeSignature "$File").SignerCertificate.Subject )
-                $FileVersion = $( Get-ChildItem $File | ForEach-Object { "{0}" -f [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_).FileVersion } )
+                $Sha1 = Get-FileHash -a SHA1 $File
+                $Sha1 = $Sha1.Hash 
+                $MD5 = Get-FileHash -a MD5 $File
+                $MD5 = $MD5.Hash
+                $File = $( Get-ChildItem $File | Foreach-Object { "{0}" -f [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_).FileVersion } )
                 Try {
-                    "{ File: " + $File, 
-                    "; Signature: " + $Signature, 
-                    "; FileVersion: " + $FileVersion `
-                        | Out-File -FilePath .\Files2Forward\"$Computer"_Signatures_"$Folder".json -Append 
+                "{ File : ${File} , Signature : ${Signature} , Sha1 : ${Sha1} , MD5 : ${MD5}" | Out-File -FilePath .\Files2Forward\${Computer}_Signatures_${Folder}.json -Append 
                 }
                 Catch { $Error[0] | Out-File -FilePath .\logs\ErrorLog\signatures.log } 
             }

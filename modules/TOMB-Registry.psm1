@@ -8,8 +8,8 @@
     preventing the ability to prevent pulling the same log multiple times and ensure each pull presents you with new data.
 
     .NOTES
-    DATE:       23 NOV 18
-    VERSION:    1.0.1
+    DATE:       03 DEC 18
+    VERSION:    1.0.2
     AUTHOR:     Brent Matlock
 
     .EXAMPLE
@@ -35,7 +35,7 @@ Function TOMB-Registry {
         "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run",
         "HKCU:\Software\Microsoft\Windows\CurrentVersion\RunOnce"
         Foreach ($Key in $HiveKeys) {
-            Try { Get-ChildItem -Path $Key | Out-File -FilePath .\Files2Forward\"$Computer"_registry.json -Append }
+            Try { Get-ChildItem -Path $Key | Out-File -FilePath .\Files2Forward\${Computer}_registry.json -Append }
             Catch {
                 $Error[0] | Out-File -FilePath .\logs\ErrorLog\Registry_logs.log
                 Write-Verbose "$Error[0]"
@@ -44,7 +44,7 @@ Function TOMB-Registry {
     }
     Else {
         Foreach ($Key in $HiveKeys) {
-            Try { Get-ChildItem -Path $Key | Out-File -FilePath .\Files2Forward\"$Computer"_registry.json -Append }
+            Try { Get-ChildItem -Path $Key | Out-File -FilePath .\Files2Forward\${Computer}_registry.json -Append }
             Catch {
                 $Error[0] | Out-File -FilePath .\logs\ErrorLog\Registry_logs.log
                 Write-Verbose "$Error[0]"

@@ -1,15 +1,18 @@
 ﻿<#
     .SYNOPSIS
-    Collects running processes running on machine. Modular loaded via TOMB or TOMB_GUI. 
+    Collects running processes running on machine. Modular loaded via TOMB or ran by itself. 
      
      .DESCRIPTION
     Used to pull processes from host with WMI (Windows Management Instrumentation) Calls.
 
     .NOTES
-    DATE:       23 NOV 18
-    VERSION:    1.0.1
+    DATE:       03 DEC 18
+    VERSION:    1.0.2
     AUTHOR:     Brent Matlock
-
+    
+    .PARAMETER Computer
+    Used to specify list of computers to collect against, if not provided then hosts are pulled from .\includes\tmp\DomainList.txt
+    
     .EXAMPLE 
     Captures process information on localhost
         TOMB-Process -ComputerName $env:COMPUTERNAME
@@ -26,21 +29,14 @@ Function TOMB-Process {
     Param(
         [Parameter(Mandatory = $false, ValueFromPipeline = $true)][System.Array]$Computer,
         [Parameter(Mandatory = $false)][string]$AD )
-    [array]$Properties = ("Caption", "CommandLine", "CreationClassName", "CreationDate", "CSCreationClassName", "CSName", "Description",
-        "ExecutablePath", "ExecutionState", "Handle", "HandleCount", "InstallDate", "KernelModeTime", "MaximumWorkingSetSize",
-        "MinimumWorkingSetSize", "Name", "OSCreationClassName", "OSName", "OtherOperationCount", "OtherTransferCount",
-        "PageFaults", "PageFileUsage", "ParentProcessId", "PeakPageFileUsage", "PeakVirtualSize", "PeakWorkingSetSize",
-        "Priority", "PrivatePageCount", "ProcessId", "QuotaNonPagedPoolUsage", "QuotaPagedPoolUsage", "QuotaPeakNonPagedPoolUsage",
-        "QuotaPeakPagedPoolUsage", "ReadOperationCount", "ReadTransferCount", "SessionId", "Status", "TerminationDate", "ThreadCount",
-        "UserModeTime", "VirtualSize", "WindowsVersion", "WorkingSetSize", "WriteOperationCount", "WriteTransferCount")
     if ($Computer -eq $null) { $Computer = $( Get-Content .\includes\tmp\DomainList.txt) }
     foreach ($Machine in $Computer) {
-        $Process_List = $( Get-WmiObject -Class 'Win32_Process' -ComputerName $Machine$AD -Property $Properties )
-        foreach ($item in $Process_List) {
-            Try { ConvertTo-Json20 -item $item | Out-File -FilePath .\Files2Forward\"$Machine$AD"_process.json -Append }
-            Catch { $Error[0] | Out-File -FilePath .\logs\ErrorLog\process.log }
-            $item = $null
-        }
+        $Process = "Get-WmiObject -Class 'Win32_Process' -ComputerName $Machine$AD -Property * "
+        $Processes = [ScriptBlock]::Create($Process)
+        $Process_List = Invoke-Command -ComputerName $Machine -ScriptBlock $Processes
+        Try { $Process_List | ConvertTo-Json | Out-File -FilePath .\Files2Forward\${Machine}${AD}_process.json -Append }
+        Catch { $Error[0] | Out-File -FilePath .\logs\ErrorLog\process.log }
+        $item = $null
     }
 }
     

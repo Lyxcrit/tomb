@@ -3,12 +3,15 @@
     Collects running services running on machine. Modular loaded via TOMB or TOMB_GUI.
 
     .NOTES
-    DATE:       23 NOV 18
-    VERSION:    1.0.1
+    DATE:       03 DEC 18
+    VERSION:    1.0.2
     AUTHOR:     Brent Matlock
          
      .DESCRIPTION
     Used to pull services from host with WMI (Windows Management Instrumentation) Calls.
+
+    .PARAMETER Computer
+    Used to specify list of computers to collect against, if not provided then hosts are pulled from .\includes\tmp\DomainList.txt
 
     .EXAMPLE 
     Will capture services on localmachine.
@@ -23,18 +26,17 @@ Function TOMB-Service {
     Param(
         [Parameter(Mandatory = $false, ValueFromPipeline = $true)][System.Array]$Computer,
         [Parameter(Mandatory = $false)][string]$AD )
-    [array]$Properties = ( "ExitCode", "Name", "ProcessId", "StartMode", "State", "Status" )
     if ($Computer -eq $null) { $Computer = $(Get-Content .\includes\tmp\DomainList.txt)}
     foreach ($Machine in $Computer) {
-        Write-Host "Computer is: $Computer"
-        $Process_List = $( Get-WmiObject -Class 'Win32_Service' -ComputerName $Machine$AD -Property $Properties )
-        foreach ($item in $Process_List) {
-            Try { ConvertTo-Json20 -item $item | Out-File -FilePath .\Files2Forward\"$Machine$AD"_service.json -Append }
+        $Service = "Process_List = $( "Get-WmiObject -Class 'Win32_Service' -ComputerName $Machine$AD -Property * "
+        $Services = [ScriptBlock]::Create($Service)
+        $Service_List = Invoke-Command -ComputerName $Machine -ScriptBlock $Services
+            Try { $Service_List | ConvertTo-Json | Out-File -FilePath .\Files2Forward\${Machine}${AD}_service.json -Append }
             Catch { $Error[0] | Out-File -FilePath .\logs\ErrorLog\service.log -Append }
         }
     }
 }   
-    
+ 
 #Legacy Script, used in order to create a "Mock" json format.
 Function TOMB-Services-MOCK {
     Param(
