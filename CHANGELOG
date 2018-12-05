@@ -9,8 +9,10 @@ All notable changes to this project will be documented in this file.
 - Changed the way TOMB-EventLog logic works, should be smoother now with no overlap resulting in logs being pulled more than once. 
 
 ### Added
-- Hostname to IP Address module, used to forward into Splunk as a lookup table for inhouse correlations. 
+- Hostname to IP Address module, used to forward into Splunk as a lookup table for inhouse correlations.
+- Logic to first test if a host is reachable before executing the scriptblock per module. 
 - Modules will now properly execute on remote hosts via the Invoke-Command, discover the network.
+- Additional Error Handling
 
 ### Changed
 - Modules should now execute as an invoke-command giving saving resources on localhost.
