@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - Logic to first test if a host is reachable before executing the scriptblock per module. 
 - Modules will now properly execute on remote hosts via the Invoke-Command, discover the network.
 - Additional Error Handling
+- Splunk webhook integration for updates
 
 ### Changed
 - Modules should now execute as an invoke-command giving saving resources on localhost.
