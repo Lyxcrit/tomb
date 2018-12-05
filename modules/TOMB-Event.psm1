@@ -8,7 +8,7 @@
     a per machine per EventCode basis, preventing the pulling of same log multiple times and ensure each pull presents you with new data. 
 
     .NOTES
-    DATE:       03 DEC 18
+    DATE:       05 DEC 18
     VERSION:    1.0.2
     AUTHOR:     Brent Matlock
 
@@ -27,28 +27,38 @@
 #Main Script, collects Eventlogs off hosts and converts the output to Json format in preperation to send to Splunk
 Function TOMB-EventLog {
     Param(
-        [Parameter(Mandatory, ValueFromPipeline = $true)][string[]]$Computer,
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true)][string[]]$Computer,
         [Parameter(Mandatory = $false, ValueFromPipeline = $true)][String[]]$LogID,
         [Parameter(Mandatory = $false)][string]$AD )
     #Used to fill null parameters with "Default" settings
     If ($null -eq $Computer) { $Computer = Get-Content .\includes\tmp\DomainList.txt }
     If ($null -eq $LogID) { $LogID = 4624, 4625, 1100, 1102 }
     foreach ($Machine in $Computer) {
+        #Verify that host is reachable. 
+        if(Test-Connection -Count 1 -ComputerName $Machine -ErrorAction SilentlyContinue){
         foreach ($Log in $LogID) {
             #Verify that Timestamp exists, if not found sets date to Current-30Days
             $LastRun = (Get-Content -Path ".\modules\DO_NOT_DELETE\${Machine}_${Log}_timestamp.log" -ErrorAction SilentlyContinue)
             If ($LastRun.Length -eq 0) { $LastRun = 1 }
+            #Generation of the scriptblock and allows remote machine to read variables being passed.
             $EventLog = "Get-WmiObject Win32_NTLogEvent -Filter 'EventCode=$Log and (RecordNumber > $LastRun)'" 
             $EventLogs = [Scriptblock]::Create($EventLog)
             $EventLogFinal = Invoke-Command -ComputerName $Machine -ScriptBlock $EventLogs -ArgumentList $Log, $LastRun
             Try {
-                $EventLogFinal | ConvertTo-Json | Out-File -FilePath .\Files2Forward\${Machine}_${Log}_logs.json -Append
-                $EventLogFinal.RecordNumber[0]  | Out-File -FilePath .\modules\DO_NOT_DELETE\${Machine}_${Log}_timestamp.log 
+                #Verify if any collections were made, if not script drops file creation and moves on. 
+                if ($EventLogFinal.Length -gt 1){
+                    $EventLogFinal | ConvertTo-Json | Out-File -FilePath .\Files2Forward\${Machine}_${Log}_logs.json -Append -Encoding utf8
+                    $EventLogFinal.RecordNumber[0]  | Out-File -FilePath .\modules\DO_NOT_DELETE\${Machine}_${Log}_timestamp.log }
+                else { Continue }
             }
+            #ANy exception messages that were generated due to error are placed in the Errorlog: Windowslogs.log
             Catch { $_.Exception.Message | Out-File -FilePath .\logs\ErrorLog\windowslogs.log -Append }
+            }
         }
+        #If host is unreachable this is placed into the Errorlog: Windowslogs.log
+        Else { "$(Get-Date): Host ${Machine} Status unreachable." | Out-File -FilePath .\logs\ErrorLog\windowslogs.log -Append  }
     }
-}
+ }
 
 
 

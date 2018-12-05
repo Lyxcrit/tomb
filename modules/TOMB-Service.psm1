@@ -3,7 +3,7 @@
     Collects running services running on machine. Modular loaded via TOMB or TOMB_GUI.
 
     .NOTES
-    DATE:       03 DEC 18
+    DATE:       05 DEC 18
     VERSION:    1.0.2
     AUTHOR:     Brent Matlock
          
@@ -28,12 +28,16 @@ Function TOMB-Service {
         [Parameter(Mandatory = $false)][string]$AD )
     if ($Computer -eq $null) { $Computer = $(Get-Content .\includes\tmp\DomainList.txt)}
     foreach ($Machine in $Computer) {
-        $Service = "Process_List = $( "Get-WmiObject -Class 'Win32_Service' -ComputerName $Machine$AD -Property * "
-        $Services = [ScriptBlock]::Create($Service)
-        $Service_List = Invoke-Command -ComputerName $Machine -ScriptBlock $Services
-            Try { $Service_List | ConvertTo-Json | Out-File -FilePath .\Files2Forward\${Machine}${AD}_service.json -Append }
-            Catch { $Error[0] | Out-File -FilePath .\logs\ErrorLog\service.log -Append }
-        }
+        #Verify that host is reachable.
+        if (Test-Connection -Count 1 -ComputerName $Machine){
+            #Generation of the scriptblock and allows remote machine to read variables being passed.
+            $Service = "Get-WmiObject -Class 'Win32_Service' -ComputerName $Machine$AD -Property * "
+            $Services = [ScriptBlock]::Create($Service)
+            $Service_List = Invoke-Command -ComputerName $Machine -ScriptBlock $Services
+            Try { $Service_List | ConvertTo-Json | Out-File -FilePath .\Files2Forward\${Machine}${AD}_service.json -Append -Encoding utf8 }
+            Catch { $Error[0] | Out-File -FilePath .\logs\ErrorLog\service.log -Append } }
+        #If host is unreachable this is placed into the Errorlog: Service.log
+        else { "$(Get-Date): Host ${Machine} Status unreachable." | Out-File -FilePath .\logs\ErrorLog\service.log -Append }
     }
 }   
  

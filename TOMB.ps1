@@ -9,7 +9,7 @@
     **For SplunkForwarder setup please read the provided documentation or use the provided Splunk_Setup.ps1 for automated setup.**
     
     .NOTES
-    DATE:       03 DEC 18
+    DATE:       05 DEC 18
     VERSION:    1.0.2
     AUTHOR:     Brent Matlock
 
@@ -29,7 +29,11 @@
 
     .EXAMPLE
     Collection of processes, services and signature on domain foo.bar
-        TOMB -Domain "OU=foo,OU=bar" -Collects "Service,Process,Signatures"
+        TOMB -Collects Service,Process,Signatures -Domain "OU=foo,OU=bar"  -Server 8.8.8.8
+
+    .EXAMPLE
+    Collection for specific hosts without query of the domain.
+        TOMB.ps1 -Collections Service,Process -Computer localhost
 #>
 
 #Provides TOMB the ability to use commandline parameters via tabbing
@@ -46,17 +50,13 @@ Param (
 #Importing of modules located within the modules folder.
 $IncludeDir = Split-Path -parent $MyInvocation.MyCommand.Path
 Import-Module -DisableNameChecking ActiveDirectory,
-$IncludeDir\includes\GUI-Functions.ps1,
+#$IncludeDir\includes\GUI-Functions.ps1,    #Upcoming GUI implementation
 $IncludeDir\modules\TOMB-Event.psm1,
 $IncludeDir\modules\TOMB-Process.psm1,
 $IncludeDir\modules\TOMB-Registry.psm1,
 $IncludeDir\modules\TOMB-Service.psm1,
 $IncludeDir\modules\TOMB-Signature.psm1,
 $IncludeDir\modules\TOMB-Json.psm1 -Force
-
-#Variable storage
-Set-Variable -Name $Computer -Scope Global
-Set-Variable -Name $LogID -Scope Global
 
 #Breakdown to restore PSModules, preventing overflow for continuous running of script.
 Function Breakdown {
@@ -97,4 +97,4 @@ Function Collects {
 }
 
 Main
-#Breakdown
+Breakdown

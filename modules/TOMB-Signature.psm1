@@ -1,5 +1,4 @@
 ﻿<#
-    
     .SYNOPSIS: 
     This block of code will parse thru folders and grab the file name and signature of the file.
 
@@ -9,7 +8,7 @@
     Incase you break the script there is an original located under 'TOMB\modules\backup'
 
     .NOTES
-    DATE:       03 DEC 18
+    DATE:       05 DEC 18
     VERSION:    1.0.2
     AUTHOR:     Brent Matlock
     
@@ -38,7 +37,7 @@ Function TOMB-Signature {
             $MD5 = $MD5.Hash
             $File = $( Get-ChildItem $File | Foreach-Object { "{0}" -f [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_).FileVersion } )
             Try {
-            "{ File : ${File} , Signature : ${Signature} , Sha1 : ${Sha1} , MD5 : ${MD5}" | Out-File -FilePath .\Files2Forward\${Computer}_Signatures_System32.json -Append 
+            "{ File : ${File} , Signature : ${Signature} , Sha1 : ${Sha1} , MD5 : ${MD5}" | Out-File -FilePath .\Files2Forward\${Computer}_Signatures_System32.json -Append -Encoding utf8
             } 
             Catch { $Error[0] | Out-File -FilePath .\logs\ErrorLog\signatures.log }
         }
@@ -54,7 +53,7 @@ Function TOMB-Signature {
                 $MD5 = $MD5.Hash
                 $File = $( Get-ChildItem $File | Foreach-Object { "{0}" -f [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_).FileVersion } )
                 Try {
-                "{ File : ${File} , Signature : ${Signature} , Sha1 : ${Sha1} , MD5 : ${MD5}" | Out-File -FilePath .\Files2Forward\${Computer}_Signatures_${Folder}.json -Append 
+                "{ File : ${File} , Signature : ${Signature} , Sha1 : ${Sha1} , MD5 : ${MD5}" | Out-File -FilePath .\Files2Forward\${Computer}_Signatures_${Folder}.json -Append -Encoding utf8
                 }
                 Catch { $Error[0] | Out-File -FilePath .\logs\ErrorLog\signatures.log } 
             }

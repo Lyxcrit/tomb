@@ -6,7 +6,7 @@
     Used to pull processes from host with WMI (Windows Management Instrumentation) Calls.
 
     .NOTES
-    DATE:       03 DEC 18
+    DATE:       05 DEC 18
     VERSION:    1.0.2
     AUTHOR:     Brent Matlock
     
@@ -31,12 +31,17 @@ Function TOMB-Process {
         [Parameter(Mandatory = $false)][string]$AD )
     if ($Computer -eq $null) { $Computer = $( Get-Content .\includes\tmp\DomainList.txt) }
     foreach ($Machine in $Computer) {
-        $Process = "Get-WmiObject -Class 'Win32_Process' -ComputerName $Machine$AD -Property * "
-        $Processes = [ScriptBlock]::Create($Process)
-        $Process_List = Invoke-Command -ComputerName $Machine -ScriptBlock $Processes
-        Try { $Process_List | ConvertTo-Json | Out-File -FilePath .\Files2Forward\${Machine}${AD}_process.json -Append }
-        Catch { $Error[0] | Out-File -FilePath .\logs\ErrorLog\process.log }
-        $item = $null
+        #Verify that host is reachable.
+        if (Test-Connection -Count 1 -ComputerName $Machine){
+            #Generation of the scriptblock and allows remote machine to read variables being passed.
+            $Process = "Get-WmiObject -Class 'Win32_Process' -ComputerName $Machine$AD -Property * "
+            $Processes = [ScriptBlock]::Create($Process)
+            $Process_List = Invoke-Command -ComputerName $Machine -ScriptBlock $Processes
+            Try { $Process_List | ConvertTo-Json | Out-File -FilePath .\Files2Forward\${Machine}${AD}_process.json -Append -Encoding utf8}
+            Catch { $Error[0] | Out-File -FilePath .\logs\ErrorLog\process.log }
+            $item = $null } 
+        #If host is unreachable this is placed into the Errorlog: Process.log
+        else { "$(Get-Date): Host ${Machine} Status unreachable." | Out-File -FilePath .\logs\ErrorLog\process.log -Append }
     }
 }
     
