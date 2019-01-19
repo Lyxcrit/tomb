@@ -24,14 +24,14 @@ TOMB does not require installing to run the script, in the future a compile scri
 ## Usages
 ### Running modules via TOMB.ps1
 Execute modules for Process, Service, EventLog, Registry and Signatures against the domain foo.bar using internal DNS 1.1.1.1
-``` .\TOMB.ps1 -Domain "DC=foo,DC=bar" -Server 1.1.1.1 -Collects Process,Service,EventLog,Registry,Signatures```
+``` .\TOMB.ps1 -Domain "DC=foo,DC=bar" -Server 1.1.1.1 -Collects Process,Service,EventLog,Registry,Signatures ```  
 Execute modules for Process, Service against single host with foo.bar domain using internal DNS 1.1.1.1
-``` .\TOMB.ps1 -Server 1.1.1.1 -Computer computer.foo.bar -Collects Process,Service```
+``` .\TOMB.ps1 -Server 1.1.1.1 -Computer computer.foo.bar -Collects Process,Service```  
 ### Running modules without TOMB.ps1
 Executing TOMB-Process.psm1 against multiple hosts
-``` Import-Module .\TOMB-Process.psm1; TOMB-Process -Computer 1.foo.bar,2.foo.bar,3.foo.bar```
+``` Import-Module .\TOMB-Process.psm1; TOMB-Process -Computer 1.foo.bar,2.foo.bar,3.foo.bar```  
 Executing TOMB-Process.psm1 against single host
-``` Import-Module .\TOMB-Process.psm1; TOMB-Process -Computer 1.foo.bar```
+``` Import-Module .\TOMB-Process.psm1; TOMB-Process -Computer 1.foo.bar```  
 __` * NOTE: At this time modules are not setup to run against entire domains *`__
 
 ## AUTHORS
