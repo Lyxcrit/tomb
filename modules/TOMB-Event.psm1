@@ -8,8 +8,8 @@
     a per machine per EventCode basis, preventing the pulling of same log multiple times and ensure each pull presents you with new data. 
 
     .NOTES
-    DATE:       05 DEC 18
-    VERSION:    1.0.2
+    DATE:       19 JAN 19
+    VERSION:    1.0.3
     AUTHOR:     Brent Matlock
 
     .PARAMETER Computer
@@ -32,11 +32,12 @@ Function TOMB-EventLog {
         [Parameter(Mandatory = $false)][string]$AD )
     #Used to fill null parameters with "Default" settings
     If ($null -eq $Computer) { $Computer = Get-Content .\includes\tmp\DomainList.txt }
-    If ($null -eq $LogID) { $LogID = 4624, 4625, 1100, 1102 }
+    If ($null -eq $LogID) { $LogIDs = $(Get-content .\includes\EventIDs.txt | Where {$_ -notmatch "^#"}) }
+    Foreach ($LogID in $LogIDs) { [string[]]$LogIDx += $LogID -Split("`t") | SElect -Skip 1 | Select -First 1 }
     foreach ($Machine in $Computer) {
         #Verify that host is reachable. 
         if(Test-Connection -Count 1 -ComputerName $Machine -ErrorAction SilentlyContinue){
-        foreach ($Log in $LogID) {
+        foreach ($Log in $LogIDx) {
             #Verify that Timestamp exists, if not found sets date to Current-30Days
             $LastRun = (Get-Content -Path ".\modules\DO_NOT_DELETE\${Machine}_${Log}_timestamp.log" -ErrorAction SilentlyContinue)
             If ($LastRun.Length -eq 0) { $LastRun = 1 }
@@ -47,7 +48,7 @@ Function TOMB-EventLog {
             Try {
                 #Verify if any collections were made, if not script drops file creation and moves on. 
                 if ($EventLogFinal.Length -gt 1){
-                    $EventLogFinal | ConvertTo-Json | Out-File -FilePath .\Files2Forward\${Machine}_${Log}_logs.json -Append -Encoding utf8
+                    $EventLogFinal | ConvertTo-Json20 | Out-File -FilePath .\Files2Forward\${Machine}_${Log}_logs.json -Append -Encoding utf8
                     $EventLogFinal.RecordNumber[0]  | Out-File -FilePath .\modules\DO_NOT_DELETE\${Machine}_${Log}_timestamp.log }
                 else { Continue }
             }
@@ -58,6 +59,7 @@ Function TOMB-EventLog {
         #If host is unreachable this is placed into the Errorlog: Windowslogs.log
         Else { "$(Get-Date): Host ${Machine} Status unreachable." | Out-File -FilePath .\logs\ErrorLog\windowslogs.log -Append  }
     }
+    Clear-Variable Log* 
  }
 
 

@@ -7,8 +7,8 @@
     These functions provide that functionality for use when environment is not running with a newer version of PowerShell
 
     .NOTES
-    DATE:       03 DEC 18
-    VERSION:    1.0.2
+    DATE:       19 JAN 19
+    VERSION:    1.0.3
     AUTHOR:     Brent Matlock
 
     .EXAMPLE
@@ -24,16 +24,71 @@
 
 #>
 
-Function ConvertFrom-Json20([object] $item) {
-    Add-Type -Assembly System.Web.Extensions
-    $PS2JS = New-Object System.Web.Script.Serialization.JavaScriptSerializer
-    return , $PS2JS.DeserializeObject($item)
+Function Escape-JSONString20($str){
+	if ($str -eq $null) {return ""}
+	$str = $str.ToString().Replace('"','\"').Replace('\','\\').Replace("`n",'\n').Replace("`r",'\r').Replace("`t",'\t')
+	return $str;
 }
 
-Function ConvertTo-Json20([object] $item) {
-    Add-Type -Assembly System.Web.Extensions
-    $PS2JS = New-Object System.Web.Script.Serialization.JavaScriptSerializer
-    return $PS2JS.Serialize($item)
+Function ConvertTo-JSON20($maxDepth = 4,$forceArray = $false) {
+	begin { $data = @() }
+	process{ $data += $_ }
+	end{
+		if ($data.length -eq 1 -and $forceArray -eq $false) {
+			$value = $data[0]
+		} else {	
+			$value = $data
+		}
+
+		if ($value -eq $null) {
+			return "null"
+		}
+
+		$dataType = $value.GetType().Name
+		
+		switch -regex ($dataType) {
+	            'String'  {
+					return  "`"{0}`"" -f (Escape-JSONString20 $value )
+				}
+	            '(System\.)?DateTime'  {return  "`"{0:yyyy-MM-dd}T{0:HH:mm:ss}`"" -f $value}
+	            'Int32|Double' {return  "$value"}
+				'Boolean' {return  "$value".ToLower()}
+	            '(System\.)?Object\[\]' { # array
+					
+					if ($maxDepth -le 0){return "`"$value`""}
+					
+					$jsonResult = ''
+					foreach($elem in $value){
+						#if ($elem -eq $null) {continue}
+						if ($jsonResult.Length -gt 0) {$jsonResult +=', '}				
+						$jsonResult += ($elem | ConvertTo-JSON20 -maxDepth ($maxDepth -1))
+					}
+					return "[" + $jsonResult + "]"
+	            }
+				'(System\.)?Hashtable' { # hashtable
+					$jsonResult = ''
+					foreach($key in $value.Keys){
+						if ($jsonResult.Length -gt 0) {$jsonResult +=', '}
+						$jsonResult += 
+@"
+	"{0}": {1}
+"@ -f $key , ($value[$key] | ConvertTo-JSON20 -maxDepth ($maxDepth -1) )
+					}
+					return "{" + $jsonResult + "}"
+				}
+	            default { #object
+					if ($maxDepth -le 0){return  "`"{0}`"" -f (Escape-JSONString20 $value)}
+					
+					return "{" +
+						(($value | Get-Member -MemberType *property | % { 
+@"
+	"{0}": {1}
+"@ -f $_.Name , ($value.($_.Name) | ConvertTo-JSON20 -maxDepth ($maxDepth -1) )			
+					
+					}) -join ', ') + "}"
+	    		}
+		}
+	}
 }
 
 #Alias registration for deploying with -Collects parameter via TOMB.ps1

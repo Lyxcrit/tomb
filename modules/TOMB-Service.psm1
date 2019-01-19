@@ -3,8 +3,8 @@
     Collects running services running on machine. Modular loaded via TOMB or TOMB_GUI.
 
     .NOTES
-    DATE:       05 DEC 18
-    VERSION:    1.0.2
+    DATE:       19 JAN 19
+    VERSION:    1.0.3
     AUTHOR:     Brent Matlock
          
      .DESCRIPTION
@@ -21,26 +21,38 @@
         TOMB-Service -ComputerName DC01 -AD '.cyber.lab'
 #>
 
+[cmdletbinding()]
+Param (
+    # ComputerName of the host you want to connect to.
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Computer,
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $AD
+)
+
 #Main Script, collects Services off hosts and converts the output to Json format in preperation to send to Splunk
-Function TOMB-Service {
-    Param(
-        [Parameter(Mandatory = $false, ValueFromPipeline = $true)][System.Array]$Computer,
-        [Parameter(Mandatory = $false)][string]$AD )
-    if ($Computer -eq $null) { $Computer = $(Get-Content .\includes\tmp\DomainList.txt)}
+Function TOMB-Service($Computer){
+    if ($Computer -eq $null) { $Computer = $( Get-Content .\includes\tmp\DomainList.txt) }
     foreach ($Machine in $Computer) {
         #Verify that host is reachable.
-        if (Test-Connection -Count 1 -ComputerName $Machine){
-            #Generation of the scriptblock and allows remote machine to read variables being passed.
-            $Service = "Get-WmiObject -Class 'Win32_Service' -ComputerName $Machine$AD -Property * "
-            $Services = [ScriptBlock]::Create($Service)
-            $Service_List = Invoke-Command -ComputerName $Machine -ScriptBlock $Services
-            Try { $Service_List | ConvertTo-Json | Out-File -FilePath .\Files2Forward\${Machine}${AD}_service.json -Append -Encoding utf8 }
-            Catch { $Error[0] | Out-File -FilePath .\logs\ErrorLog\service.log -Append } }
-        #If host is unreachable this is placed into the Errorlog: Service.log
-        else { "$(Get-Date): Host ${Machine} Status unreachable." | Out-File -FilePath .\logs\ErrorLog\service.log -Append }
+        Try { $connectionCheck = $(Test-Connection -Count 1 -ComputerName $Machine -ErrorAction Stop ) }
+        #If host is unreachable this is placed into the Errorlog: Process.log
+        Catch [System.Net.NetworkInformation.PingException] { "$(Get-Date): Host ${Machine} Status unreachable." | Out-File -FilePath .\logs\ErrorLog\service.log -Append }
+        Catch [System.Management.Automation.Remoting.PSRemotingTransportException] { "$(Get-Date): Host ${Machine} Access Denied" | Out-File -FilePath .\logs\ErrorLog\service.log -Append }
+        If ($connectionCheck){ServiceCollect}
+        Else { "$(Get-Date) : $($Error[0])" | Out-File -FilePath .\logs\ErrorLog\service.log -Append}
     }
-}   
- 
+}  
+
+Function ServiceCollect { 
+    #Generation of the scriptblock and allows remote machine to read variables being passed.
+    $Service = "Get-WmiObject -Class 'Win32_Service' -ComputerName $Machine$AD -Property * "
+    $Services = [ScriptBlock]::Create($Service)
+    $Service_List = Invoke-Command -ComputerName $Machine -ScriptBlock { $Services } -ErrorVariable Message 2>$Message
+    Try { $Service_Final = $Service_List
+        If($Service_Final.Length -gt 0){ $Service_Final | ConvertTo-Json20 | Out-File -FilePath .\Files2Forward\${Machine}${AD}_service.json -Append -Encoding utf8 } 
+        Else { "$(Get-Date) : $($Message)" | Out-File -FilePath .\logs\ErrorLog\service.log -Append} }
+    Catch { $Error[0] | Out-File -FilePath .\logs\ErrorLog\service.log }
+}
+
 #Legacy Script, used in order to create a "Mock" json format.
 Function TOMB-Services-MOCK {
     Param(

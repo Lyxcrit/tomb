@@ -8,8 +8,8 @@
     preventing the ability to prevent pulling the same log multiple times and ensure each pull presents you with new data.
 
     .NOTES
-    DATE:       03 DEC 18
-    VERSION:    1.0.2
+    DATE:       19 JAN 19
+    VERSION:    1.0.3
     AUTHOR:     Brent Matlock
 
     .EXAMPLE

@@ -1,12 +1,35 @@
 #Changelog
 All notable changes to this project will be documented in this file.
 
-##[Current Version: 1.0.2]
+##[Current Version: 1.0.3]
 
+##[Version 1.0.3]
+### Changed 
+- Changed the logic for execution in an effort to move to class based scripting
+- Changed scripts to provide better error handling that was not previously in place
+
+### Added 
+- Credential checking to assist with locked accounts and provide the user with immediate feedback
+- Made modules into smaller functions in an effort to begin migration to threaded usage
+- Corrected the JSON conversion issues and now working with PowerShell v2.0
+- TOMB-EventLog now supports "Profiles", added a document under the .\includes\ directory, comment lines for events you do not wish to run
+
+### Fixes
+- Fixed an issue with variables not having the correct scoping
+- Fixed an issue where empty documents were generated
+
+### Future Improvements (TODO)
+- Most to threaded collects
+- Expand registry collection in an effort to follow standard baseline information used by SANS
+
+=========================================================================================================================
+##[Previous Changes]
 ##[Version 1.0.2]
 ### Changed
 - Changed PowerShell 2.0 Convertto-Json20 to use standard Convertto-Json standard with Powershell 3.0
 - Changed the way TOMB-EventLog logic works, should be smoother now with no overlap resulting in logs being pulled more than once. 
+- Modules should now execute as an invoke-command giving saving resources on localhost.
+- Fixed typos within scripts. Taking donations for spelling lessons. 
 
 ### Added
 - Hostname to IP Address module, used to forward into Splunk as a lookup table for inhouse correlations.
@@ -14,10 +37,6 @@ All notable changes to this project will be documented in this file.
 - Modules will now properly execute on remote hosts via the Invoke-Command, discover the network.
 - Additional Error Handling
 - Splunk webhook integration for updates
-
-### Changed
-- Modules should now execute as an invoke-command giving saving resources on localhost.
-- Fixed typos within scripts. Taking donations for spelling lessons. 
 
 ## Fixes
 - Fixed an issue where TOMB-EventLog TimeWritten comparison was not working due to String vs DateTime, 
@@ -32,9 +51,8 @@ All notable changes to this project will be documented in this file.
 - Convert TOMB-Registry to utilize the Invoke-Command for remote collection
 - Create Sha1/Md5 Powershell 2.0 compliant function for TOMB-Signature 
 - Fix ConvertTo-Json20 to work when object is not an array.
-
 =========================================================================================================================
-##[Previous Changes]
+
 ##[Version 1.0.1]
 ### Changed
 - Updated logic within Tomb.ps1 to fix an issue with passing parameters from this script to the additional modules

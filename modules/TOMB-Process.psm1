@@ -6,8 +6,8 @@
     Used to pull processes from host with WMI (Windows Management Instrumentation) Calls.
 
     .NOTES
-    DATE:       05 DEC 18
-    VERSION:    1.0.2
+    DATE:       19 JAN 19
+    VERSION:    1.0.3
     AUTHOR:     Brent Matlock
     
     .PARAMETER Computer
@@ -24,27 +24,39 @@
         TOMB-Process -ComputerName "DC01","FS01" -AD ".Test.Domain"
 #>
 
+[cmdletbinding()]
+Param (
+    # ComputerName of the host you want to connect to.
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Computer,
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $AD
+)
+
 #Main Script, collects Processes off hosts and converts the output to Json format in preperation to send to Splunk
-Function TOMB-Process {
-    Param(
-        [Parameter(Mandatory = $false, ValueFromPipeline = $true)][System.Array]$Computer,
-        [Parameter(Mandatory = $false)][string]$AD )
+Function TOMB-Process($Computer) {
     if ($Computer -eq $null) { $Computer = $( Get-Content .\includes\tmp\DomainList.txt) }
     foreach ($Machine in $Computer) {
         #Verify that host is reachable.
-        if (Test-Connection -Count 1 -ComputerName $Machine){
-            #Generation of the scriptblock and allows remote machine to read variables being passed.
-            $Process = "Get-WmiObject -Class 'Win32_Process' -ComputerName $Machine$AD -Property * "
-            $Processes = [ScriptBlock]::Create($Process)
-            $Process_List = Invoke-Command -ComputerName $Machine -ScriptBlock $Processes
-            Try { $Process_List | ConvertTo-Json | Out-File -FilePath .\Files2Forward\${Machine}${AD}_process.json -Append -Encoding utf8}
-            Catch { $Error[0] | Out-File -FilePath .\logs\ErrorLog\process.log }
-            $item = $null } 
+        Try { $connectionCheck = $(Test-Connection -Count 1 -ComputerName $Machine -ErrorAction Stop ) }
         #If host is unreachable this is placed into the Errorlog: Process.log
-        else { "$(Get-Date): Host ${Machine} Status unreachable." | Out-File -FilePath .\logs\ErrorLog\process.log -Append }
+        Catch [System.Net.NetworkInformation.PingException] { "$(Get-Date): Host ${Machine} Status unreachable." | Out-File -FilePath .\logs\ErrorLog\process.log -Append }
+        Catch [System.Management.Automation.Remoting.PSRemotingTransportException] { "$(Get-Date): Host ${Machine} Access Denied" | Out-File -FilePath .\logs\ErrorLog\process.log -Append }
+        Catch [System.Management.Automation.ErrorRecord] { throw "Cannot Reach Host: ${Machine}"}
+        If ($connectionCheck) {ProcessCollect}
+        Else { "$(Get-Date) : $($Error[0])" | Out-File -FilePath .\logs\ErrorLog\process.log -Append}
     }
 }
-    
+
+Function ProcessCollect { 
+    #Generation of the scriptblock and allows remote machine to read variables being passed.
+    $Process = "Get-WmiObject -Class 'Win32_Process' -ComputerName $Machine$AD -Property * -ErrorAction Stop"
+    $Processes = [ScriptBlock]::Create($Process)
+    $Process_List = $(Invoke-Command -ComputerName $Machine -ScriptBlock $Processes -ErrorVariable Message 2>$Message )
+    Try { $Process_Final = $Process_List 
+        If($Process_Final.Length -gt 0){ $Process_Final | ConvertTo-Json20 | Out-File -FilePath .\Files2Forward\${Machine}${AD}_process.json -Append -Encoding utf8 }
+        Else{ "$(Get-Date): $($Message)"| Out-File -FilePath .\logs\ErrorLog\process.log -Append }}
+    Catch [System.Net.NetworkInformation.PingException] { "$(Get-Date): Host ${Machine} Status unreachable after." | Out-File -FilePath .\logs\ErrorLog\process.log -Append }
+}
+
 #Legacy Script, used in order to create a "Mock" json format.
 Function TOMB-Process-Mock {
     Param(

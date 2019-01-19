@@ -9,8 +9,8 @@
     **For SplunkForwarder setup please read the provided documentation or use the provided Splunk_Setup.ps1 for automated setup.**
     
     .NOTES
-    DATE:       05 DEC 18
-    VERSION:    1.0.2
+    DATE:       18 JAN 19
+    VERSION:    1.0.3
     AUTHOR:     Brent Matlock
 
     .PARAMETER Domain
@@ -41,10 +41,10 @@
 Param (
     # ComputerName of the host you want to connect to.
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.String] $Domain,
-    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.String] $Server,
-    [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Collects,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Computer,
-    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $LogID
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $LogID,
+    [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String] $Server,
+    [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Collects
 )
 
 #Importing of modules located within the modules folder.
@@ -56,14 +56,31 @@ $IncludeDir\modules\TOMB-Process.psm1,
 $IncludeDir\modules\TOMB-Registry.psm1,
 $IncludeDir\modules\TOMB-Service.psm1,
 $IncludeDir\modules\TOMB-Signature.psm1,
+$IncludeDir\modules\TOMB-Host2IP.psm1,
 $IncludeDir\modules\TOMB-Json.psm1 -Force
+
+
+#Set Variable Scoping
+$(Set-Variable -name Computer -Scope Global) 2>&1 | Out-null
+$(Set-Variable -name Server -Scope Global) 2>&1 | Out-null
+$(Set-Variable -name Domain -Scope Global) 2>&1 | Out-null
+$(Set-Variable -name LogID -Scope Global) 2>&1 | Out-null
+$(Set-Variable -name Collects -Scope Global) 2>&1 | Out-null
+
 
 #Breakdown to restore PSModules, preventing overflow for continuous running of script.
 Function Breakdown {
-    Remove-Module -Name TOMB*, GUI*, Powershell2-Json
-    Remove-Item Alias:EventLog, Alias:EventLog.Mock, Alias:Process, Alias:Process.Mock, Alias:Registry, Alias:Service, Alias:Service.Mock, Alias:Signature -Force
-    Remove-Item -Path .\includes\tmp\DomainList.txt
+    Remove-Module -Name TOMB*, GUI*, Powershell2-Json -ErrorAction SilentlyContinue
+    Remove-Item -Path .\includes\tmp\DomainList.txt -ErrorAction SilentlyContinue
 }
+
+#Check Credentials to prevent account lockouts
+Function CredCheck { 
+    Try { $credCheck = $(Get-ADUser -Filter * -Server $Server -ErrorAction Stop| Select-Object -First 1) }
+    Catch [System.Security.Authentication.AuthenticationException] { Write-Host "Invalid Credentials" }
+    Catch [Microsoft.ActiveDirectory.Management.ADServerDownException] { Write-Host "Active Directory Server Cannot be reached" }
+    If ($credCheck) { Main }
+} 
 
 #Initial function to branch logic based off provided parameters.
 Function Main {
@@ -79,6 +96,7 @@ Function Main {
         Foreach ($Hostx in $Domain_Computers) { ( $Hostx -replace "@{DNSHostName=", "" ) -replace "}", "" | Out-File -FilePath .\includes\tmp\DomainList.txt -Append}
         Collects
     }
+    #Used to run against listed computer(s)
     If ($Computer) {
         Collects
     }
@@ -92,9 +110,10 @@ Function Collects {
             If ($obj -eq "EventLog") { .$obj $Computer $LogID }
             If ($obj -eq "Signature") { .$obj $Computer }
             If ($obj -eq "Registry") { .$obj $Computer }
+            If ($obj -eq "Host2IP") { .$obj $Server}
         }
     }
 }
 
-Main
+CredCheck
 Breakdown
