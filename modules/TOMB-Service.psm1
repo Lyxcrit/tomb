@@ -44,14 +44,15 @@ Function TOMB-Service($Computer){
 
 Function ServiceCollect { 
     #Generation of the scriptblock and allows remote machine to read variables being passed.
-    $Service = "Get-WmiObject -Class 'Win32_Service' -ComputerName $Machine$AD -Property * "
+    $Service = "Get-WmiObject -Class 'Win32_Service' -ComputerName $Machine$AD -Property * -ErrorAction Stop"
     $Services = [ScriptBlock]::Create($Service)
-    $Service_List = Invoke-Command -ComputerName $Machine -ScriptBlock { $Services } -ErrorVariable Message 2>$Message
+    $Service_List = $(Invoke-Command -ComputerName $Machine -ScriptBlock $Services -ErrorVariable Message 2>$Message )
     Try { $Service_Final = $Service_List
         If($Service_Final.Length -gt 0){ $Service_Final | ConvertTo-Json20 | Out-File -FilePath .\Files2Forward\${Machine}${AD}_service.json -Append -Encoding utf8 } 
         Else { "$(Get-Date) : $($Message)" | Out-File -FilePath .\logs\ErrorLog\service.log -Append} }
-    Catch { $Error[0] | Out-File -FilePath .\logs\ErrorLog\service.log }
+        Catch [System.Net.NetworkInformation.PingException] { "$(Get-Date): Host ${Machine} Status unreachable after." | Out-File -FilePath .\logs\ErrorLog\service.log }
 }
+
 
 #Legacy Script, used in order to create a "Mock" json format.
 Function TOMB-Services-MOCK {
