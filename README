@@ -7,7 +7,7 @@
     "       \__|   \"_____/  |___|\__/|___|(_______/   "
 
 # Project TOMB
-    The One Mission Builder (TOMB) is a project used to aid in the collection of artifacts for forwarding into Splunk via SplunkUniversalForwarder. TOMB uses WMI calls against either single host, or a Domain. Modules can be ran via TOMB.ps1 or by themselves once you import the module you wish to use. TOMB utilizes a build and breakdown method which is used in an effort to keep hosts resources free, and avoid overloading of the PSModule.
+The One Mission Builder (TOMB) is a project used to aid in the collection of artifacts for forwarding into Splunk via SplunkUniversalForwarder. TOMB uses WMI calls against either single host, or a Domain. Modules can be ran via TOMB.ps1 or by themselves once you import the module you wish to use. TOMB utilizes a build and breakdown method which is used in an effort to keep hosts resources free, and avoid overloading of the PSModule.
 
 ## Prerequisits
 ``` 
@@ -17,9 +17,9 @@
 ```
 
 ## Installing
-``` 
+ 
 TOMB does not require installing to run the script, in the future a compile script will be written to setup required file structures. In order to forward collections into Splunk a UniversalForwarder needs to be installed on host that will run these scripts. Technology Add-on(TA) for parsing collection and baselining fields is coming (Currently in development) 
-```
+
 
 ## Usages
 ### Running modules via TOMB.ps1
