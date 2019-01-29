@@ -24,7 +24,7 @@ Function Escape-JSONString($str){
 	return $str;
 }
 
-Function TOMB-Json($maxDepth = 4,$forceArray = $false) {
+Function TOMB-Json($maxDepth = 20,$forceArray = $false) {
 	begin { $data = @() }
 	process{ $data += $_ }
 	end{

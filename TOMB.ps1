@@ -49,6 +49,10 @@ Param (
     [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String] $Server,
     [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Collects
 )
+#Adds the modules to $env:PSModulePath for the session
+$env:PSModulePath = $env:PSModulePath -replace [regex]::Escape(";$includeDir\modules")
+$CurrentValue = [Environment]::GetEnvironmentVariable("PSModulePath", "User")
+[Environment]::SetEnvironmentVariable("PSModulePath", $CurrentValue + ";$IncludeDir\modules", "User")
 
 #Importing of modules located within the modules folder.
 $IncludeDir = Split-Path -parent $MyInvocation.MyCommand.Path
@@ -62,9 +66,6 @@ $IncludeDir\modules\TOMB-Host2IP\TOMB-Host2IP.psm1,
 $IncludeDir\modules\TOMB-Json\TOMB-Json.psm1,
 $IncludeDir\modules\TOMB-Service\TOMB-Service.psm1 -Force 
 $CurrentFolder = $IncludeDir
-#Adds the modules to $env:PSModulePath for the session
-$CurrentValue = [Environment]::GetEnvironmentVariable("PSModulePath", "User")
-[Environment]::SetEnvironmentVariable("PSModulePath", $CurrentValue + ";$IncludeDir\modules", "User")
 
 #Set Variable Scoping
 $(Set-Variable -name IncludeDir -Scope Global) 2>&1 | Out-Null
@@ -81,8 +82,6 @@ $(Set-Variable -name Json_Convert -Scope GLobal) 2>&1 | Out-Null
 Function Breakdown {
     Remove-Module -Name TOMB*, GUI*, Powershell2-Json -ErrorAction SilentlyContinue
     Remove-Item -Path .\includes\tmp\DomainList.txt -ErrorAction SilentlyContinue
-    #Removes the modules from PSModulePath
-    $env:PSModulePath = $env:PSModulePath -replace [regex]::Escape(";$includeDir\modules")
 }
 
 #Check Credentials to prevent account lockouts

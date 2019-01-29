@@ -8,9 +8,15 @@
     preventing the ability to prevent pulling the same log multiple times and ensure each pull presents you with new data.
 
     .NOTES
-    DATE:       19 JAN 19
-    VERSION:    1.0.3
-    AUTHOR:     Brent Matlock
+    DATE:       27 JAN 19
+    VERSION:    1.0.5
+    AUTHOR:     Brent Matlock -Lyx
+
+    .PARAMETER Computer
+    Used to specify computer to be collected on
+
+    .PARAMETER HiveKey
+    Used to specify hive to collect
 
     .EXAMPLE
     Will Return Registry entries for the HLKM:SOFTWARE branch against the localhost
@@ -20,35 +26,81 @@
         TOMB-Registry -Computer $env:COMPUTERNAME
 #>
 
+[cmdletbinding()]
+Param (
+    # ComputerName of the host you want to connect to.
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Computer,    
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $HiveKey,
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Path
+)
+
+#Build Variable Scope
+$(Set-Variable -name Computer -Scope Global) 2>&1 | Out-null
+$(Set-Variable -name HiveKey -Scope Global) 2>&1 | Out-null
+$(Set-Variable -name Path -Scope Global) 2>&1 | Out-null
+
 #Main Script, collects Registry off hosts and converts the output to Json format in preperation to send to Splunk
-Function TOMB-Registry {
-    Param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)][System.Array]$Computer,
-        [Parameter(Mandatory = $false, ValueFromPipeline = $true)][System.Array]$HiveKey )
+Function TOMB-Registry($Computer, $HiveKey, $Path){
+    cd $Path
+    Try {
+        $connectionCheck = $(Test-Connection -Count 1 -ComputerName $Computer -ErrorAction Stop)
+        }
+    #If host is unreachable this is placed into the Errorlog: Process.log
+    Catch [System.Net.NetworkInformation.PingException] {
+        "$(Get-Date): Host ${Computer} Status unreachable." |
+        Out-File -FilePath $Path\logs\ErrorLog\registry.log -Append
+        }
+    Catch [System.Management.Automation.Remoting.PSRemotingTransportException] {
+        "$(Get-Date): Host ${Computer} Access Denied" |
+        Out-File -FilePath $Path\logs\ErrorLog\registry.log -Append 
+    }
+    If ($connectionCheck){ RegistryCollect($Computer) }
+    Else {
+        "$(Get-Date) : $($Error[0])" | Out-File -FilePath $Path\logs\ErrorLog\registry.log -Append
+    }
+}
+
+
+Function RegistryCollect($Computer, $HiveKey){
     If ($HiveKey -EQ $null) {
-        [System.Array]$HiveKeys = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run",
-        "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce",
-        "HKLM:\Software",
-        "HKLM:\System\MountedDevices",
-        "HKLM:\System\CurrentControlSet\Enum\USB",
-        "HKLM:\Software\Microsoft\Command Processor",
-        "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run",
-        "HKCU:\Software\Microsoft\Windows\CurrentVersion\RunOnce"
-        Foreach ($Key in $HiveKeys) {
-            Try { Get-ChildItem -Path $Key | Out-File -FilePath .\Files2Forward\${Computer}_registry.json -Append -Encoding utf8}
-            Catch {
-                $Error[0] | Out-File -FilePath .\logs\ErrorLog\Registry_logs.log
-                Write-Verbose "$Error[0]"
+        [System.Array]$HiveKey = ` 
+            "REGISTRY::HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\",
+            "REGISTRY::HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Run\",
+            "REGISTRY::HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\RunOnce\",
+            "REGISTRY::HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\RunOnce\Setup\",
+            "REGISTRY::HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\RunOnceEx\",
+            "REGISTRY::HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Run\",
+            "REGISTRY::HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce\",
+            "REGISTRY::HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce\Setup\",
+            "REGISTRY::HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnceEx\",
+            "REGISTRY::HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\",
+            "REGISTRY::HKEY_USERS\$CurrentUserSid\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\",
+            "REGISTRY::HKEY_USERS\$CurrentUserSid\Software\Microsoft\Windows\CurrentVersion\Run\",
+            "REGISTRY::HKEY_USERS\$CurrentUserSid\Software\Microsoft\Windows\CurrentVersion\RunOnce\",
+            "REGISTRY::HKEY_USERS\$CurrentUserSid\Software\Microsoft\Windows\CurrentVersion\RunOnce\Setup\",
+            "REGISTRY::HKEY_USERS\$CurrentUserSid\Software\Microsoft\Windows\CurrentVersion\RunOnceEx\",
+            "REGISTRY::HKEY_USERS\$CurrentUserSid\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\",
+            "REGISTRY::HKEY_USERS\$CurrentUserSid\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Run\",
+            "REGISTRY::HKEY_USERS\$CurrentUserSid\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce\",
+            "REGISTRY::HKEY_USERS\$CurrentUserSid\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce\Setup\",
+            "REGISTRY::HKEY_USERS\$CurrentUserSid\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnceEx\"
+    }
+    Foreach ($Key in $HiveKey) {
+        $Registry = "(Get-ItemProperty $Key -EA SilentlyContinue) | Select * -ExcludeProperty PS*,*Volume* "
+        $Registries = [ScriptBlock]::Create($Registry)
+        $Registry_List = $(Invoke-Command -ComputerName $Computer -ScriptBlock $Registries -ErrorVariable Message 2>$Message)
+        Try { $Registry_List
+            If ($Registy_List -eq $null){
+                Foreach ($obj in $Registry_List){
+                    $obj | TOMB-Json | Out-File -FilePath $Path\Files2Forward\${Computer}_registry.json -Append -Encoding utf8
+                }
+            }
+            Else {
+                "$(Get-Date) : $($Message)" | Out-File -File $Path\logs\ErrorLog\registry.log -Append
             }
         }
-    }
-    Else {
-        Foreach ($Key in $HiveKeys) {
-            Try { Get-ChildItem -Path $Key | Out-File -FilePath .\Files2Forward\${Computer}_registry.json -Append -Encoding utf8}
-            Catch {
-                $Error[0] | Out-File -FilePath .\logs\ErrorLog\Registry_logs.log
-                Write-Verbose "$Error[0]"
-            }
+        Catch {
+            "$(Get-Date) : $($Error[0])" | Out-File -FilePath $Path\logs\ErrorLog\registry.log
         }
     }
 }
