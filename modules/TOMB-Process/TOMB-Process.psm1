@@ -1,32 +1,34 @@
 ﻿<#
     .SYNOPSIS
-    Collects running Processs running on machine. Modular loaded via TOMB or TOMB_GUI.
+    Collects running Processs running on machine. Modular loaded via TOMB.ps1
 
     .NOTES
-    DATE:       27 JAN 19
-    VERSION:    1.0.5
-    AUTHOR:     Brent Matlock
+    DATE:       16 FEB 19
+    VERSION:    1.0.4
+    AUTHOR:     Brent Matlock -Lyx
          
      .DESCRIPTION
     Used to pull Processs from host with WMI (Windows Management Instrumentation) Calls.
 
     .PARAMETER Computer
-    Used to specify list of computers to collect against, if not provided then hosts are pulled from .\includes\tmp\DomainList.txt
+    Used to specify list of computers to collect against
+        If not provided then hosts are pulled from .\includes\tmp\DomainList.txt when the -Domain parameter is used
+        If not provided then hosts are pulled from .\includes\tmp\StaticList.txt otherwise
+   
+    .PARAMETER Path
+    Used to specify where output folder should be, by default when launched via TOMB.ps1 this is the execution path
+    where TOMB.ps1 is invoked.
 
     .EXAMPLE 
     Will capture Processs on localmachine.
         TOMB-Process -computername $evn:computername 
-    .EXAMPLE
-    Will capture Processs from the domain controller on the cyber.lab domain.
-        TOMB-Process -ComputerName DC01 -AD '.cyber.lab'
 #>
 
 [cmdletbinding()]
 Param (
     # ComputerName of the host you want to connect to.
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Computer,    
-    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Path,
-    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $AD
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Path
 )
 
 #Build Variable Scope
@@ -37,7 +39,7 @@ $(Set-Variable -name Path -Scope Global) 2>&1 | Out-null
 Function TOMB-Process($Computer, $Path){
     cd $Path
     Try {
-        $connectionCheck = $(Test-Connection -Count 1 -ComputerName $Computer -ErrorAction Stop)
+        $ConnectionCheck = $(Test-Connection -Count 1 -ComputerName $Computer -ErrorAction Stop)
         }
     #If host is unreachable this is placed into the Errorlog: Process.log
     Catch [System.Net.NetworkInformation.PingException] {
@@ -48,20 +50,21 @@ Function TOMB-Process($Computer, $Path){
         "$(Get-Date): Host ${Computer} Access Denied" |
         Out-File -FilePath $Path\logs\ErrorLog\Process.log -Append
         }
-    If ($connectionCheck){ ProcessCollect($Computer) }
+    If ($ConnectionCheck){ ProcessCollect($Computer) }
     Else {
-        "$(Get-Date) : $($Error[0])" | Out-File -FilePath $Path\logs\ErrorLog\Process.log -Append
+        "$(Get-Date) : ERROR MESSAGE : $($Error[0])" | Out-File -FilePath $Path\logs\ErrorLog\Process.log -Append
     }
 }
 
 Function ProcessCollect($Computer){
     #Generation of the scriptblock and allows remote machine to read variables being passed.
     $Process = "(Get-WmiObject -Class 'Win32_Process' -ErrorAction Stop) | Select * -Exclude __*,*Properties,*Path,Qualifiers,Scope,Options"
-    $Processs = [ScriptBlock]::Create($Process)
-    $Process_List = $(Invoke-Command -ComputerName $Computer -ScriptBlock $Processs -ErrorVariable Message 2>$Message)
+    $Processes = [ScriptBlock]::Create($Process)
+    $Process_List = $(Invoke-Command -ComputerName $Computer -ScriptBlock $Processes -ErrorVariable Message 2>$Message)
     Try { $Process_List
         If($Process_List -ne $null){
             Foreach($obj in $Process_List){
+                #Output is encoded with UTF8 in order to Splunk to parse correctly
                 $obj | TOMB-Json | Out-File -FilePath $Path\Files2Forward\Process\${Computer}_Process.json -Append -Encoding utf8
             }
         }

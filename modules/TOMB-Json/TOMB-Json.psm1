@@ -7,9 +7,9 @@
     These functions provide that functionality for use when environment is not running with a newer version of PowerShell 3.0+
 
     .NOTES
-    DATE:       19 JAN 19
-    VERSION:    1.0.3
-    AUTHOR:     Brent Matlock
+    DATE:       16 FEB 19
+    VERSION:    1.0.4
+    AUTHOR:     Brent Matlock -Lyx
 
     .EXAMPLE
     Converting to JSON from non-json format

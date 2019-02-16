@@ -3,19 +3,23 @@
     Collects running services running on machine. Modular loaded via TOMB or TOMB_GUI.
 
     .NOTES
-    DATE:       27 JAN 19
-    VERSION:    1.0.5
-    AUTHOR:     Brent Matlock
-         
+    DATE:       16 FEB 19
+    VERSION:    1.0.4
+    AUTHOR:     Brent Matlock -Lyx
+
      .DESCRIPTION
     Used to pull services from host with WMI (Windows Management Instrumentation) Calls.
 
     .PARAMETER Computer
     Used to specify list of computers to collect against, if not provided then hosts are pulled from .\includes\tmp\DomainList.txt
 
-    .EXAMPLE 
+    .PARAMETER Path
+    Used to specify where output folder should be, by default when launched via TOMB.ps1 this is the execution path
+    where TOMB.ps1 is invoked.
+
+    .EXAMPLE
     Will capture services on localmachine.
-        TOMB-Service -computername $evn:computername 
+        TOMB-Service -computername $evn:computername
     .EXAMPLE
     Will capture services from the domain controller on the cyber.lab domain.
         TOMB-Service -ComputerName DC01 -AD '.cyber.lab'
@@ -25,8 +29,7 @@
 Param (
     # ComputerName of the host you want to connect to.
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Computer,
-    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Path,
-    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $AD
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Path
 )
 
 #Build Variable Scope
@@ -37,7 +40,7 @@ $(Set-Variable -name Path -Scope Global) 2>&1 | Out-null
 Function TOMB-Service($Computer, $Path){
     cd $Path
     Try {
-        $connectionCheck = $(Test-Connection -Count 1 -ComputerName $Computer -ErrorAction Stop)
+        $ConnectionCheck = $(Test-Connection -Count 1 -ComputerName $Computer -ErrorAction Stop)
         }
     #If host is unreachable this is placed into the Errorlog: Process.log
     Catch [System.Net.NetworkInformation.PingException] {
@@ -46,17 +49,17 @@ Function TOMB-Service($Computer, $Path){
         }
     Catch [System.Management.Automation.Remoting.PSRemotingTransportException] {
         "$(Get-Date): Host ${Computer} Access Denied" |
-    Out-File -FilePath $Path\logs\ErrorLog\service.log -Append 
-    }
-    If ($connectionCheck){ ServiceCollect($Computer) }
+        Out-File -FilePath $Path\logs\ErrorLog\service.log -Append
+        }
+    If ($ConnectionCheck){ ServiceCollect($Computer) }
     Else {
-        "$(Get-Date) : $($Error[0])" | Out-File -FilePath $Path\logs\ErrorLog\service.log -Append
+        "$(Get-Date) : ERROR MESSAGE : $($Error[0])" | Out-File -FilePath $Path\logs\ErrorLog\service.log -Append
     }
 }
 
 Function ServiceCollect($Computer){
     #Generation of the scriptblock and allows remote machine to read variables being passed.
-    $Service = "Get-WmiObject -Class 'Win32_Service' -EA Stop) | Select * -Exclude __*,*Properties,*Path,Qualifiers,Scope,Options"
+    $Service = "(Get-WmiObject -Class 'Win32_Service' -ErrorAction Stop) | Select * -Exclude __*,*Properties,*Path,Qualifiers,Scope,Options"
     $Services = [ScriptBlock]::Create($Service)
     $Service_List = $(Invoke-Command -ComputerName $Computer -ScriptBlock $Services -ErrorVariable Message 2>$Message)
     Try { $Service_List
@@ -71,11 +74,10 @@ Function ServiceCollect($Computer){
         }
     }
     Catch [System.Net.NetworkInformation.PingException] {
-        "$(Get-Date): Host ${Computer} Status unreachable after." | 
-    Out-File -FilePath $Path\logs\ErrorLog\service.log 
+        "$(Get-Date): Host ${Computer} Status unreachable after." |
+    Out-File -FilePath $Path\logs\ErrorLog\service.log -Append
     }
 }
-
 
 #Alias registration for deploying with -Collects parameter via TOMB.ps1
 New-Alias -Name Service -Value TOMB-Service

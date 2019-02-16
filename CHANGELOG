@@ -1,8 +1,28 @@
 #Changelog
 All notable changes to this project will be documented in this file.
 
-##[Current Version: 1.0.3]
+##[Current Version: 1.0.4]
+### Changed
+- Changed the way modules are loaded and remove during script execution
+- Changed threading to allow the user to set the ammount of concurrent jobs that can be ran
 
+### Added
+- Signature collection
+- Registry collection
+
+### Fixes
+- Minor tweaks used to fix broken logic
+- Fixed outputs that resulted in broken json output that could not be properly parsed via Splunk
+
+### Future Improvements (TODO) 
+- Begin implementation for SPLUNK TA
+- Add additional modules to collect Startup processes/service
+- Add additional module to collect AutoRuns
+- Add additional module to establish baselines for Legitimate Windows processes
+- Add the ability to collect on OS outside of Windows
+
+=========================================================================================================================
+##[Previous Changes]
 ##[Version 1.0.3]
 ### Changed 
 - Changed the logic for execution in an effort to move to class based scripting
@@ -21,9 +41,8 @@ All notable changes to this project will be documented in this file.
 ### Future Improvements (TODO)
 - Most to threaded collects
 - Expand registry collection in an effort to follow standard baseline information used by SANS
-
 =========================================================================================================================
-##[Previous Changes]
+
 ##[Version 1.0.2]
 ### Changed
 - Changed PowerShell 2.0 Convertto-Json20 to use standard Convertto-Json standard with Powershell 3.0

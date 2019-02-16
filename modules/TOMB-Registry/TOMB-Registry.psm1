@@ -8,8 +8,8 @@
     preventing the ability to prevent pulling the same log multiple times and ensure each pull presents you with new data.
 
     .NOTES
-    DATE:       27 JAN 19
-    VERSION:    1.0.5
+    DATE:       16 FEB 19
+    VERSION:    1.0.4
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Computer
@@ -17,6 +17,10 @@
 
     .PARAMETER HiveKey
     Used to specify hive to collect
+
+    .PARAMETER Path
+    Used to specify where output folder should be, by default when launched via TOMB.ps1 this is the execution path
+    where TOMB.ps1 is invoked.
 
     .EXAMPLE
     Will Return Registry entries for the HLKM:SOFTWARE branch against the localhost
@@ -29,7 +33,7 @@
 [cmdletbinding()]
 Param (
     # ComputerName of the host you want to connect to.
-    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Computer,    
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Computer,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $HiveKey,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Path
 )
@@ -43,7 +47,7 @@ $(Set-Variable -name Path -Scope Global) 2>&1 | Out-null
 Function TOMB-Registry($Computer, $HiveKey, $Path){
     cd $Path
     Try {
-        $connectionCheck = $(Test-Connection -Count 1 -ComputerName $Computer -ErrorAction Stop)
+        $ConnectionCheck = $(Test-Connection -Count 1 -ComputerName $Computer -ErrorAction Stop)
         }
     #If host is unreachable this is placed into the Errorlog: Process.log
     Catch [System.Net.NetworkInformation.PingException] {
@@ -52,9 +56,9 @@ Function TOMB-Registry($Computer, $HiveKey, $Path){
         }
     Catch [System.Management.Automation.Remoting.PSRemotingTransportException] {
         "$(Get-Date): Host ${Computer} Access Denied" |
-        Out-File -FilePath $Path\logs\ErrorLog\registry.log -Append 
+        Out-File -FilePath $Path\logs\ErrorLog\registry.log -Append
     }
-    If ($connectionCheck){ RegistryCollect($Computer) }
+    If ($ConnectionCheck){ RegistryCollect($Computer) }
     Else {
         "$(Get-Date) : $($Error[0])" | Out-File -FilePath $Path\logs\ErrorLog\registry.log -Append
     }
@@ -63,7 +67,7 @@ Function TOMB-Registry($Computer, $HiveKey, $Path){
 
 Function RegistryCollect($Computer, $HiveKey){
     If ($HiveKey -EQ $null) {
-        [System.Array]$HiveKey = ` 
+        [System.Array]$HiveKey = `
             "REGISTRY::HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\",
             "REGISTRY::HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Run\",
             "REGISTRY::HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\RunOnce\",
@@ -74,23 +78,23 @@ Function RegistryCollect($Computer, $HiveKey){
             "REGISTRY::HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce\Setup\",
             "REGISTRY::HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnceEx\",
             "REGISTRY::HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\",
-            "REGISTRY::HKEY_USERS\$CurrentUserSid\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\",
-            "REGISTRY::HKEY_USERS\$CurrentUserSid\Software\Microsoft\Windows\CurrentVersion\Run\",
-            "REGISTRY::HKEY_USERS\$CurrentUserSid\Software\Microsoft\Windows\CurrentVersion\RunOnce\",
-            "REGISTRY::HKEY_USERS\$CurrentUserSid\Software\Microsoft\Windows\CurrentVersion\RunOnce\Setup\",
-            "REGISTRY::HKEY_USERS\$CurrentUserSid\Software\Microsoft\Windows\CurrentVersion\RunOnceEx\",
-            "REGISTRY::HKEY_USERS\$CurrentUserSid\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\",
-            "REGISTRY::HKEY_USERS\$CurrentUserSid\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Run\",
-            "REGISTRY::HKEY_USERS\$CurrentUserSid\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce\",
-            "REGISTRY::HKEY_USERS\$CurrentUserSid\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce\Setup\",
-            "REGISTRY::HKEY_USERS\$CurrentUserSid\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnceEx\"
+            "REGISTRY::HKEY_USERS\\*\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\",
+            "REGISTRY::HKEY_USERS\\*\Software\Microsoft\Windows\CurrentVersion\Run\",
+            "REGISTRY::HKEY_USERS\\*\Software\Microsoft\Windows\CurrentVersion\RunOnce\",
+            "REGISTRY::HKEY_USERS\\*\Software\Microsoft\Windows\CurrentVersion\RunOnce\Setup\",
+            "REGISTRY::HKEY_USERS\\*\Software\Microsoft\Windows\CurrentVersion\RunOnceEx\",
+            "REGISTRY::HKEY_USERS\\*\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\",
+            "REGISTRY::HKEY_USERS\\*\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Run\",
+            "REGISTRY::HKEY_USERS\\*\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce\",
+            "REGISTRY::HKEY_USERS\\*\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce\Setup\",
+            "REGISTRY::HKEY_USERS\\*\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnceEx\"
     }
     Foreach ($Key in $HiveKey) {
         $Registry = "(Get-ItemProperty $Key -EA SilentlyContinue) | Select * -ExcludeProperty PS*,*Volume* "
         $Registries = [ScriptBlock]::Create($Registry)
         $Registry_List = $(Invoke-Command -ComputerName $Computer -ScriptBlock $Registries -ErrorVariable Message 2>$Message)
         Try { $Registry_List
-            If ($Registy_List -eq $null){
+            If ($Registy_List -ne $null){
                 Foreach ($obj in $Registry_List){
                     $obj | TOMB-Json | Out-File -FilePath $Path\Files2Forward\${Computer}_registry.json -Append -Encoding utf8
                 }
@@ -107,4 +111,4 @@ Function RegistryCollect($Computer, $HiveKey){
 
 #Alias registration for deploying with -Collects via TOMB.ps1
 New-Alias -Name Registry -Value TOMB-Registry
-Export-ModuleMember -Alias * -Function *
+Export-ModuleMember -Alias * -Function * -ErrorAction SilentlyContinue

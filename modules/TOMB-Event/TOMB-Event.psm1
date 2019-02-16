@@ -9,12 +9,16 @@
     ensure each pull presents you with new data.
 
     .NOTES
-    DATE:       27 JAN 19
-    VERSION:    1.0.5
+    DATE:       16 FEB 19
+    VERSION:    1.0.4
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Computer
     Used to specify list of computers to collect against, if not provided then hosts are pulled from .\includes\tmp\DomainList.txt
+
+    .PARAMETER Path
+    Used to specify where output folder should be, by default when launched via TOMB.ps1 this is the execution path
+    where TOMB.ps1 is invoked.
 
     .PARAMETER LogID
     Used to specify list of EventID to collect against, if not provided default list activates.
@@ -31,8 +35,7 @@ Param (
     # ComputerName of the host you want to connect to.
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Computer,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Path,
-    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $LogID,
-    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $AD
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $LogID
 )
 
 #Build Variable Scope
@@ -44,18 +47,18 @@ $(Set-Variable -name Path -Scope Global) 2>&1 | Out-null
 Function TOMB-Event($Computer, $Path, $LogID) {
     cd $Path
     Try { 
-        $connectionCheck = $(Test-Connection -Count 1 -ComputerName $Computer -ErrorAction Stop) 
+        $ConnectionCheck = $(Test-Connection -Count 1 -ComputerName $Computer -ErrorAction Stop) 
         }
     #If host is unreachable this is placed into the Errorlog: Process.log
     Catch [System.Net.NetworkInformation.PingException] { 
         "$(Get-Date): Host ${Computer} Status unreachable." | 
-        Out-File -FilePath $Path\logs\ErrorLog\windowslogs.log -Append 
+        Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append 
         }
     Catch [System.Management.Automation.Remoting.PSRemotingTransportException] { 
         "$(Get-Date): Host ${Computer} Access Denied" | 
-        Out-File -FilePath $Path\logs\ErrorLog\windowslogs.log -Append 
+        Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append 
         }
-    If ($connectionCheck){ EventCollect($Computer) }
+    If ($ConnectionCheck){ EventCollect($Computer) }
     Else { 
         "$(Get-Date) : $($Error[0])" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append 
     }
@@ -73,13 +76,13 @@ Function EventCollect($Computer, $LogID){
         $LastRun = (Get-Content -Path $Path\modules\DO_NOT_DELETE\${Computer}_${Log}_timestamp.log -ErrorAction SilentlyContinue)
         If ($LastRun.Length -eq 0) { $LastRun = 1 }
         #Generation of the scriptblock and allows remote machine to read variables being passed.
-        $EventLog = "(Get-WmiObject Win32_NTLogEvent -Filter 'EventCode=$Log and (RecordNumber > $LastRun)' -EA Stop) | 
-                      Select * -Exclude __*,*Properties,Scope,*Path,*Strings,Options,Qual*"
+        $EventLog = "(Get-WmiObject Win32_NTLogEvent -Filter 'EventCode=$Log and (RecordNumber > $LastRun)' -EA Stop) `
+                    | Select * -Exclude __*,*Properties,*Path,Qualifiers,Scope,Options "
         $EventLogs = [Scriptblock]::Create($EventLog)
         $EventLogFinal = $(Invoke-Command -ComputerName $Computer -ScriptBlock $EventLogs -ErrorVariable Message 2>$Message)
         Try { $EventLogFinal
             #Verify if any collections were made, if not script drops file creation and moves on.
-            If ($EventLogFinal -ne $null){ 
+            If ($EventLogFinal -ne $null){
                 Foreach($obj in $EventLogFinal){ 
                     $obj | TOMB-Json | 
                 Out-File -FilePath $Path\Files2Forward\Events\${Computer}_${Log}_logs.json -Append -Encoding UTF8
@@ -87,17 +90,16 @@ Function EventCollect($Computer, $LogID){
             }
         }
             Else { 
-                "$(Get-Date) : $($Message)" | Out-File -FilePath $Path\logs\ErrorLog\windowslogs.log -Append
+                "$(Get-Date) : $($Message)" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append
                 }
             }
         #Any exception messages that were generated due to error are placed in the Errorlog: Windowslogs.log
         Catch { 
-            "$(Get-Date): $($Error[0])" | Out-File -FilePath $Path\logs\ErrorLog\windowslogs.log 
+            "$(Get-Date): $($Error[0])" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log 
         }
     }
 }
 
-
 #Alias registration for deploying with -Collects parameter via TOMB.ps1
 New-Alias -Name Event -Value TOMB-Event
-Export-ModuleMember -Alias * -Function *
+Export-ModuleMember -Alias * -Function * -ErrorAction SilentlyContinue

@@ -6,8 +6,8 @@
     Used to correlate hostnames and IP addresses within the target domain. Final product is used within Splunk as a lookup table to associate both.
 
     .NOTES
-    DATE:       19 JAN 19
-    VERSION:    1.0.3
+    DATE:       16 FEB 19
+    VERSION:    1.0.4
     AUTHOR:     Brent Matlock
 
     .PARAMETER Server
@@ -21,7 +21,8 @@
 Function TOMB-Host2IP {
     Param(
         [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String] $Server)
-    $AD = Get-ADComputer -Filter * -Server $Server | Select-Object DNSHostName | Format-Table -HideTableHeaders | Out-File -FilePath .\includes\tmp\AD_DNSNAMES.txt -Append
+    $AD = Get-ADComputer -Filter * -Server $Server | Select-Object DNSHostName | Format-Table -HideTableHeaders |
+          Out-File -FilePath .\includes\tmp\AD_DNSNAMES.txt -Append
     $ComputerList = Get-Content ".\includes\tmp\AD_DNSNAMES.txt"
     $ComputerList | ForEach-Object { $_.TrimEnd()} | Set-Content .\includes\tmp\AD_DNSNAMES.txt
     $ComputerList = Get-Content ".\includes\tmp\AD_DNSNAMES.txt"

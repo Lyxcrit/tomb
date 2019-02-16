@@ -8,10 +8,13 @@
     Incase you break the script there is an original located under 'TOMB\modules\backup'
 
     .NOTES
-    DATE:       19 JAN 19
-    VERSION:    1.0.3
-    AUTHOR:     Brent Matlock
-    
+    DATE:       16 FEB 19
+    VERSION:    1.0.4
+    AUTHOR:     Brent Matlock -Lyx
+
+    .PARAMETER Computer
+    Used to specify list of computers to collect against, if not provided then hosts are pulled from .\includes\tmp\DomainList.txt
+
     .EXAMPLE
     When searching for specific file type extensions you can add the -Include parameter, which will take WILDCARDS
         'Get-ChildItem -Include "*.exe","*.dll"'
@@ -28,40 +31,42 @@ Function TOMB-Signature {
         [Parameter(Mandatory = $false)][string[]]$Path )
     If ( $Computer -eq $null ) { $Computer = $( Get-Content .\includes\tmp\DomainList.txt )}
     If ( $Path -eq $null ) {
-        $FileDirectory = $( Get-ChildItem -File "C:\Windows\System32\*.dll" )   #DO NOT CHANGE, This is the default folder. Include additional Folders below
+        $FileDirectory = $( Get-ChildItem -File "C:\Windows\System32\*", "C:\Program Files\*", "C:\Program Files (x86)\*", "C:\Users\*" `
+                            -Include "*.txt","*.dll","*.exe", "*.rtf", "*.xls*" -Depth 10 -Recurse)
         Foreach ($File in $FileDirectory) {
             $Signature = $(( Get-AuthenticodeSignature "$File").SignerCertificate.Subject )
             $Sha1 = Get-FileHash -a SHA1 $File
-            $Sha1 = $Sha1.Hash 
+            $Sha1 = $Sha1.Hash
             $MD5 = Get-FileHash -a MD5 $File
             $MD5 = $MD5.Hash
-            $File = $( Get-ChildItem $File | Foreach-Object { "{0}" -f [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_).FileVersion } )
+            $FileVersion = $( Get-ChildItem $File | Foreach-Object { "{0}" -f [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_).FileVersion } )
             Try {
-            "{ File : ${File} , Signature : ${Signature} , Sha1 : ${Sha1} , MD5 : ${MD5}" | Out-File -FilePath .\Files2Forward\${Computer}_Signatures_System32.json -Append -Encoding utf8
-            } 
-            Catch { $Error[0] | Out-File -FilePath .\logs\ErrorLog\signatures.log }
+            "[{ File: ${File} , FileVersion: ${FileVersion}, Signature: ${Signature} , SHA1: ${Sha1} , MD5: ${MD5}" + "}]" |
+            Out-File -FilePath $Path\Files2Forward\Signature\${Computer}_Signatures.json -Append -Encoding utf8
+            }
+            Catch { $Error[0] | Out-File -FilePath $Path\logs\ErrorLog\signatures.log -Append }
         }
     }
-    Else { 
+    Else {
         Foreach ( $Folder in $Path ) {
             $Files = ( Get-ChildItem $Folder )
             Foreach ( $File in $Files ) {
                 $Signature = $(( Get-AuthenticodeSignature "$File").SignerCertificate.Subject )
                 $Sha1 = Get-FileHash -a SHA1 $File
-                $Sha1 = $Sha1.Hash 
+                $Sha1 = $Sha1.Hash
                 $MD5 = Get-FileHash -a MD5 $File
                 $MD5 = $MD5.Hash
-                $File = $( Get-ChildItem $File | Foreach-Object { "{0}" -f [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_).FileVersion } )
+                $FileVersion = $( Get-ChildItem $File | Foreach-Object { "{0}" -f [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_).FileVersion } )
                 Try {
-                "{ File : ${File} , Signature : ${Signature} , Sha1 : ${Sha1} , MD5 : ${MD5}" | Out-File -FilePath .\Files2Forward\${Computer}_Signatures_${Folder}.json -Append -Encoding utf8
+                "[{ File: ${File} , FileVersion: ${FileVersion}, Signature: ${Signature} , SHA1: ${Sha1} , MD5: ${MD5}" + "}]" |
+                Out-File -FilePath $Path\Files2Forward\Signature\${Computer}_Signatures.json -Append -Encoding utf8
                 }
-                Catch { $Error[0] | Out-File -FilePath .\logs\ErrorLog\signatures.log } 
+                Catch { $Error[0] | Out-File -FilePath $Path\logs\ErrorLog\signatures.log -Append }
             }
         }
     }
 }
 
-
 #Alias registration for deploying with -Collects parameter via TOMB.ps1
 New-Alias -Name Signature -Value TOMB-Signature
-Export-ModuleMember -Alias * -Function *
+Export-ModuleMember -Alias * -Function * -ErrorAction SilentlyContinue

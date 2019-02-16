@@ -9,9 +9,9 @@
     **For SplunkForwarder setup please read the provided documentation or use the provided Splunk_Setup.ps1 for automated setup.**
     
     .NOTES
-    DATE:       24 JAN 19
+    DATE:       16 FEB 19
     VERSION:    1.0.4
-    AUTHOR:     Brent Matlock
+    AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Domain
     Determins if ran against domain objects, or localmachine
@@ -46,16 +46,14 @@ Param (
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Computer,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $LogID,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][Int] $Threads,
-    [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String] $Server,
-    [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Collects
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String] $Server,
+    [Parameter(Mandatory = $true , ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Collects
 )
-#Adds the modules to $env:PSModulePath for the session
-$env:PSModulePath = $env:PSModulePath -replace [regex]::Escape(";$includeDir\modules")
-$CurrentValue = [Environment]::GetEnvironmentVariable("PSModulePath", "User")
-[Environment]::SetEnvironmentVariable("PSModulePath", $CurrentValue + ";$IncludeDir\modules", "User")
 
 #Importing of modules located within the modules folder.
 $IncludeDir = Split-Path -parent $MyInvocation.MyCommand.Path
+#Adds the modules to $env:PSModulePath for the session
+$env:PSModulePath += ";$IncludeDir\modules"
 Import-Module -DisableNameChecking ActiveDirectory,
 #$IncludeDir\includes\GUI-Functions.ps1,    #Upcoming GUI implementation
 $IncludeDir\modules\TOMB-Event\TOMB-Event.psm1,
@@ -76,17 +74,18 @@ $(Set-Variable -name LogID -Scope Global) 2>&1 | Out-null
 $(Set-Variable -name Collects -Scope Global) 2>&1 | Out-null
 $(Set-Variable -name Thread -Scope Global) 2>&1 | Out-Null
 $(Set-Variable -name CurrentFolder -Scope Global) 2>&1 | Out-Null
-$(Set-Variable -name Json_Convert -Scope GLobal) 2>&1 | Out-Null
+$(Set-Variable -name Json_Convert -Scope Global) 2>&1 | Out-Null
 
 #Breakdown to restore PSModules, preventing overflow for continuous running of script.
 Function Breakdown {
     Remove-Module -Name TOMB*, GUI*, Powershell2-Json -ErrorAction SilentlyContinue
     Remove-Item -Path .\includes\tmp\DomainList.txt -ErrorAction SilentlyContinue
+    $env:PSModulePath = $env:PSModulePath -replace [regex]::Escape(";$IncludeDir\modules")
 }
 
 #Check Credentials to prevent account lockouts
 Function CredCheck { 
-    Try { $credCheck = $(Get-ADUser -Filter * -Server $Server -ErrorAction Stop| Select-Object -First 1) }
+    Try { $credCheck = $(Get-ADUser -Filter * -Server $Server -ErrorAction Stop | Select-Object -First 1) }
     Catch [System.Security.Authentication.AuthenticationException] { Write-Host "Invalid Credentials" }
     Catch [Microsoft.ActiveDirectory.Management.ADServerDownException] { Write-Host "Active Directory Server Cannot be reached" }
     If ($credCheck) { Main }
@@ -96,6 +95,7 @@ Function CredCheck {
 Function Main {
     #Gathering Domain Computers list if -Domain AND -Server are provided, typically used when NOT domain joined or using DNS
     If ($Domain -and $Server) {
+        CredCheck
         If ($null -eq $Threads){ Write-Host "`r`n`r`nMust use '-Thread #' when using the '-Domain' switch. Stopping Execution" -foreground Red ; Pause}
         Else {$Domain_Computers = $( Get-ADComputer -Filter * -Properties Name, DistinguishedName -Server $Server -SearchBase $Domain | Select-Object DNSHostName )
         Foreach ($Hostx in $Domain_Computers) { ( $Hostx -replace "@{DNSHostName=", "" ) -replace "}", "" | Out-File -FilePath .\includes\tmp\DomainList.txt -Append}
@@ -103,58 +103,60 @@ Function Main {
     }
     #Gathering Domain computers list if -Domain is provided without the -Server parameter, typically used with domain joined or using DNS
     If ($Domain -and ($Server -eq "")) {
+        CredCheck
         $Domain_Computers = $( Get-ADComputer -Filter * -Properties Name, DistinguishedName -SearchBase $Domain | Select-Object DNSHostName )
         Foreach ($Hostx in $Domain_Computers) { ( $Hostx -replace "@{DNSHostName=", "" ) -replace "}", "" | Out-File -FilePath .\includes\tmp\DomainList.txt -Append}
         Collects
     }
     #Used to run against listed computer(s)
     If ($Computer) {
+        Collects($Computer)
+    }
+    Else { 
         Collects
     }
 }
 
 Function Collects {
-Foreach ($obj in $Collects){
-    If ($nuill -eq $Computer) { $ComputerList = $( Get-Content .\includes\tmp\DomainList.txt) }
-    Else { $Computer = $ComputerList }
-    Foreach ($Computer in $ComputerList){
+If ($null -eq $Computer) {
+    If (!($Domain)){ $ComputerList = $(Get-Content .\includes\tmp\StaticList.txt | Where {$_ -notmatch "^#"}) }
+    Else { $ComputerList = $(Get-Content .\includes\tmp\DomainList.txt -ErrorAction SilentlyContinue) } }
+Else { $ComputerList = $Computer }
+Foreach ($Computer in $ComputerList){
+    Foreach ($obj in $Collects){
         While ($(Get-Job -state running).count -ge $Threads){
             Start-Sleep -Milliseconds 500
         }
         If ($obj -eq "Service") {
-            Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Service, TOMB-Json -Force} `
+            Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Service, TOMB-Json -Force } `
                       -ScriptBlock { Param($Computer, $CurrentFolder, $Json_Convert) 
                                     Import-Module -DisableNameChecking TOMB-Service, TOMB-Json -Force
                                     TOMB-Service -Computer $Computer -Path $CurrentFolder} `
                       -ArgumentList $Computer, $CurrentFolder, $Json_Convert }
         If ($obj -eq "Process") { 
-            Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Process, TOMB-Json -Force } `
+	        Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Process, TOMB-Json -Force } `
                       -ScriptBlock { Param($Computer, $CurrentFolder, $Json_Convert) 
                                     Import-Module -DisableNameChecking TOMB-Process, TOMB-Json -Force
                                     TOMB-Process -Computer $Computer -Path $CurrentFolder} `
-                      -ArgumentList $Computer, $CurrentFolder, $Json_Convert } 
+                      -ArgumentList $Computer, $CurrentFolder, $Json_Convert }
         If ($obj -eq "EventLog") { 
             Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Event, TOMB-Json -Force } `
                       -ScriptBlock { Param($Computer, $LogID, $CurrentFolder, $Json_Convert) 
-                                    Import-Module -DisableNameChecking TOMB-Event, TOMB-Json
+                                    Import-Module -DisableNameChecking TOMB-Event, TOMB-Json -Force
                                     TOMB-Event -Computer $Computer -LogId $LogID -Path $CurrentFolder} `
                       -ArgumentList $Computer, $LogID, $CurrentFolder, $Json_Convert }
-        If ($obj -eq "Signature") { 
-            Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Signature } `
-                      -ScriptBlock { Param($Computer, $CurrentFolder) 
-                                    Import-Module -DisableNameChecking TOMB-Signature
-                                    TOMB-Signature -Computer $Computer -Path $CurrentFolder} `
-                      -ArgumentList $Computer, $CurrentFolder }
+        If ($obj -eq "Signature") {
+            Invoke-Command -ComputerName $Computer -FilePath .\modules\TOMB-Signature\TOMB-Signature.psm1 -ArgumentList $Computer }
         If ($obj -eq "Registry") { 
-            Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Host2IP } `
+            Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Registry, TOMB-Json -Force } `
                       -ScriptBlock { Param($Computer, $CurrentFolder) 
-                                    Import-Module -DisableNameChecking TOMB-Host2IP
-                                    TOMB-Host2IP -Computer $Computer -Path $CurrentFolder} `
+                                    Import-Module -DisableNameChecking TOMB-Registry, TOMB-Json -Force
+                                    TOMB-Registry -Computer $Computer -Path $CurrentFolder} `
                       -ArgumentList $Computer, $CurrentFolder }
         If ($obj -eq "Host2IP") { .$obj $Server $Threads }
         }
     }
 }
 
-CredCheck
+Main
 Breakdown
