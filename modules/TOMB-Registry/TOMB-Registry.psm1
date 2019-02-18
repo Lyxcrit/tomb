@@ -8,8 +8,8 @@
     preventing the ability to prevent pulling the same log multiple times and ensure each pull presents you with new data.
 
     .NOTES
-    DATE:       16 FEB 19
-    VERSION:    1.0.4
+    DATE:       18 FEB 19
+    VERSION:    1.0.4a
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Computer

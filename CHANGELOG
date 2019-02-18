@@ -2,6 +2,28 @@
 All notable changes to this project will be documented in this file.
 
 ##[Current Version: 1.0.4]
+###Changed
+- Changed from creating scriptblocks to utilizing functions for remote operations
+- Changed some logic within the TOMB.ps1 to run smoother
+
+### Added
+- Added additional module to collect Scheduled Tasks
+- Added ListAll value for -Collects that will display all current Collections
+
+### Fixes
+- Fixed an issue where Signatures would only collect on the localhost rather than actually executing on remote host
+- Corrected outputs for error logging that would not collected the correct information
+
+### TODO 
+- Begin implementation for SPLUNK TA
+- Add additional modules to collect Startup processes/service
+- Add additional module to collect AutoRuns
+- Add additional module to establish baselines for Legitimate Windows processes
+- Add the ability to collect on OS outside of Windows
+
+=========================================================================================================================
+##[Previous Changes]
+##[Version 1.0.4]
 ### Changed
 - Changed the way modules are loaded and remove during script execution
 - Changed threading to allow the user to set the ammount of concurrent jobs that can be ran
@@ -20,9 +42,8 @@ All notable changes to this project will be documented in this file.
 - Add additional module to collect AutoRuns
 - Add additional module to establish baselines for Legitimate Windows processes
 - Add the ability to collect on OS outside of Windows
-
 =========================================================================================================================
-##[Previous Changes]
+
 ##[Version 1.0.3]
 ### Changed 
 - Changed the logic for execution in an effort to move to class based scripting

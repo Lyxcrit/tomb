@@ -9,8 +9,8 @@
     **For SplunkForwarder setup please read the provided documentation or use the provided Splunk_Setup.ps1 for automated setup.**
     
     .NOTES
-    DATE:       16 FEB 19
-    VERSION:    1.0.4
+    DATE:       18 FEB 19
+    VERSION:    1.0.4a
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Domain
@@ -36,7 +36,7 @@
 
     .EXAMPLE
     Collection for specific hosts without query of the domain.
-        TOMB.ps1 -Collections Service,Process -Computer localhost
+        TOMB.ps1 -Collects Service,Process -Computer localhost
 #>
 
 #Provides TOMB the ability to use commandline parameters via tabbing
@@ -62,7 +62,8 @@ $IncludeDir\modules\TOMB-Registry\TOMB-Registry.psm1,
 $IncludeDir\modules\TOMB-Signature\TOMB-Signature.psm1,
 $IncludeDir\modules\TOMB-Host2IP\TOMB-Host2IP.psm1,
 $IncludeDir\modules\TOMB-Json\TOMB-Json.psm1,
-$IncludeDir\modules\TOMB-Service\TOMB-Service.psm1 -Force 
+$IncludeDir\modules\TOMB-Service\TOMB-Service.psm1,
+$IncludeDir\modules\TOMB-ScheduledTask\TOMB-ScheduledTask.psm1 -Force 
 $CurrentFolder = $IncludeDir
 
 #Set Variable Scoping
@@ -118,15 +119,26 @@ Function Main {
 }
 
 Function Collects {
+If ($null -eq $Thread){ $Threads = 50 }
 If ($null -eq $Computer) {
     If (!($Domain)){ $ComputerList = $(Get-Content .\includes\tmp\StaticList.txt | Where {$_ -notmatch "^#"}) }
-    Else { $ComputerList = $(Get-Content .\includes\tmp\DomainList.txt -ErrorAction SilentlyContinue) } }
+    Else { $ComputerList = $(Get-Content .\includes\tmp\DomainList.txt -ErrorAction SilentlyContinue ) } }
 Else { $ComputerList = $Computer }
 Foreach ($Computer in $ComputerList){
     Foreach ($obj in $Collects){
         While ($(Get-Job -state running).count -ge $Threads){
             Start-Sleep -Milliseconds 500
         }
+        If ($obj -eq "ListAll"){
+            Write-Host "`t`t`tCollectName`t`tDescription `
+            ------------`t------------- `
+            Service`t`t`tCollect Running Services `
+            Process`t`t`tCollect Running Processes `
+            EventLog`t`tCollect EventLogs via -LogID OR profile in .\includes\EventIDs.txt `
+            Signature`t`tCollect File Information (Version|MD5|SHA1) `
+            SchedTask`t`tCollected Scheduled Task information `
+            Registry`t`tCollect Key registry information `
+            Host2IP`t`t`tCreates a table that correlates Hostname to IP Addresses" }
         If ($obj -eq "Service") {
             Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Service, TOMB-Json -Force } `
                       -ScriptBlock { Param($Computer, $CurrentFolder, $Json_Convert) 
@@ -146,7 +158,17 @@ Foreach ($Computer in $ComputerList){
                                     TOMB-Event -Computer $Computer -LogId $LogID -Path $CurrentFolder} `
                       -ArgumentList $Computer, $LogID, $CurrentFolder, $Json_Convert }
         If ($obj -eq "Signature") {
-            Invoke-Command -ComputerName $Computer -FilePath .\modules\TOMB-Signature\TOMB-Signature.psm1 -ArgumentList $Computer }
+            Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Signature, TOMB-Json -Force } `
+                      -ScriptBlock { Param($Computer, $CurrentFolder) 
+                                    Import-Module -DisableNameChecking TOMB-Signature, TOMB-Json -Force
+                                    TOMB-Signature -Computer $Computer -Path $CurrentFolder} `
+                      -ArgumentList $Computer, $CurrentFolder }
+        If ($obj -eq "SchedTask") {
+            Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-ScheduledTask, TOMB-Json -Force } `
+                      -ScriptBlock { Param($Computer, $CurrentFolder) 
+                                    Import-Module -DisableNameChecking TOMB-ScheduledTask, TOMB-Json -Force
+                                    TOMB-ScheduledTask -Computer $Computer -Path $CurrentFolder} `
+                      -ArgumentList $Computer, $CurrentFolder }
         If ($obj -eq "Registry") { 
             Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Registry, TOMB-Json -Force } `
                       -ScriptBlock { Param($Computer, $CurrentFolder) 

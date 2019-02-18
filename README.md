@@ -32,7 +32,6 @@ Executing TOMB-Process.psm1 against multiple hosts
 ``` Import-Module .\TOMB-Process.psm1; TOMB-Process -Computer 1.foo.bar,2.foo.bar,3.foo.bar```  
 Executing TOMB-Process.psm1 against single host  
 ``` Import-Module .\TOMB-Process.psm1; TOMB-Process -Computer 1.foo.bar```  
-__` * NOTE: At this time modules are not setup to run against entire domains *`__
 
 ## AUTHORS
     Brent Matlock - Lyx

@@ -6,9 +6,9 @@
     Used to correlate hostnames and IP addresses within the target domain. Final product is used within Splunk as a lookup table to associate both.
 
     .NOTES
-    DATE:       16 FEB 19
-    VERSION:    1.0.4
-    AUTHOR:     Brent Matlock
+    DATE:       18 FEB 19
+    VERSION:    1.0.4a
+    AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Server
     Used to point collection to DNS server where A records reside for Hostname to IP Address conversions.
