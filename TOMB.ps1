@@ -119,6 +119,17 @@ Function Main {
 }
 
 Function Collects {
+If("Service","Process","Signature","Registry","SchedTask","EventLog" -NotContains $Collects){ 
+    "No valid collect present, please select valid option below:`r`n`r`n"
+    "`tCollectName`tDescription`r`n`t------------`t------------- `
+    `tService`t`tCollect Running Services`r`n`tProcess`t`tCollect Running Processes `
+    `tEventLog`tCollect EventLogs via -LogID OR profile in .\includes\EventIDs.txt `
+    `tSignature`tCollect File Information (Version|MD5|SHA1) `
+    `tSchedTask`tCollected Scheduled Task information`r`n`tRegistry`tCollect Key registry information `
+    `tHost2IP`t`tCreates a table that correlates Hostname to IP Addresses`r`n `
+    `tListAll`t`tList all above modules`r`n"
+    $Collects = Read-Host -Prompt "Enter Valid Collec: " 
+    $Collects = $Collects -Split(",")}
 If ($null -eq $Thread){ $Threads = 50 }
 If ($null -eq $Computer) {
     If (!($Domain)){ $ComputerList = $(Get-Content .\includes\tmp\StaticList.txt | Where {$_ -notmatch "^#"}) }
@@ -129,16 +140,6 @@ Foreach ($Computer in $ComputerList){
         While ($(Get-Job -state running).count -ge $Threads){
             Start-Sleep -Milliseconds 500
         }
-        If ($obj -eq "ListAll"){
-            Write-Host "`t`t`tCollectName`t`tDescription `
-            ------------`t------------- `
-            Service`t`t`tCollect Running Services `
-            Process`t`t`tCollect Running Processes `
-            EventLog`t`tCollect EventLogs via -LogID OR profile in .\includes\EventIDs.txt `
-            Signature`t`tCollect File Information (Version|MD5|SHA1) `
-            SchedTask`t`tCollected Scheduled Task information `
-            Registry`t`tCollect Key registry information `
-            Host2IP`t`t`tCreates a table that correlates Hostname to IP Addresses" }
         If ($obj -eq "Service") {
             Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Service, TOMB-Json -Force } `
                       -ScriptBlock { Param($Computer, $CurrentFolder, $Json_Convert) 

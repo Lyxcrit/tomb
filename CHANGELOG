@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Added additional module to collect Scheduled Tasks
 - Added ListAll value for -Collects that will display all current Collections
+- Input validation for Collects parameter. Now lists all modules and allows user chance to correct
 
 ### Fixes
 - Fixed an issue where Signatures would only collect on the localhost rather than actually executing on remote host
