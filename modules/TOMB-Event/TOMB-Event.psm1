@@ -9,8 +9,8 @@
     ensure each pull presents you with new data.
 
     .NOTES
-    DATE:       18 FEB 19
-    VERSION:    1.0.4a
+    DATE:       27 FEB 19
+    VERSION:    1.0.5
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Computer
@@ -42,6 +42,7 @@ Param (
 $(Set-Variable -name Computer -Scope Global) 2>&1 | Out-null
 $(Set-Variable -name LogID -Scope Global) 2>&1 | Out-null
 $(Set-Variable -name Path -Scope Global) 2>&1 | Out-null
+$(Set-Variable -name LastRun -Scope Global) 2>&1 | Out-Null
 
 #Main Script, collects Eventlogs off hosts and converts the output to Json format in preperation to send to Splunk
 Function TOMB-Event($Computer, $Path, $LogID) {
@@ -64,6 +65,24 @@ Function TOMB-Event($Computer, $Path, $LogID) {
     }
 }
 
+Function EventParse($Log, $LastRun) {
+    $Events = Get-WinEvent -FilterHashtable @{Logname='Security';Id=$($Log)} |
+              Where-Object -FilterScript { $_.RecordId -gt $LastRun }
+    ForEach ($Event in $Events) {
+        # Convert the event to XML
+        $eventXML = [xml]$Event.ToXml()
+        # Iterate through each one of the XML message properties
+        For ($i=0; $i -lt $eventXML.Event.EventData.Data.Count; $i++) {
+            # Append these as object properties
+            Add-Member -InputObject $Event -MemberType NoteProperty -Force `
+                -Name  $eventXML.Event.EventData.Data[$i].name `
+                -Value $eventXML.Event.EventData.Data[$i].'#text'
+        }
+    }        
+    $obj = ($Events | Select-Object * -Exclude Message,*Properties,ActivityId,Bookmark,Keywords,Matched*,Opcode,Version)
+    return $obj
+}
+
 Function EventCollect($Computer, $LogID){
     If ($null -eq $LogID) { 
         $LogIDs = $(Get-content $Path\includes\EventIDs.txt | Where {$_ -notmatch "^#"}) 
@@ -76,26 +95,28 @@ Function EventCollect($Computer, $LogID){
         $LastRun = (Get-Content -Path $Path\modules\DO_NOT_DELETE\${Computer}_${Log}_timestamp.log -ErrorAction SilentlyContinue)
         If ($LastRun.Length -eq 0) { $LastRun = 1 }
         #Generation of the scriptblock and allows remote machine to read variables being passed.
-        $EventLog = "(Get-WmiObject Win32_NTLogEvent -Filter 'EventCode=$Log and (RecordNumber > $LastRun)' -EA Stop) `
-                    | Select * -Exclude __*,*Properties,*Path,Qualifiers,Scope,Options "
-        $EventLogs = [Scriptblock]::Create($EventLog)
-        $EventLogFinal = $(Invoke-Command -ComputerName $Computer -ScriptBlock $EventLogs -ErrorVariable Message 2>$Message)
+        $EventLogFinal = $(Invoke-Command -ComputerName $Computer -ScriptBlock ${function:EventParse} -ErrorVariable Message 2>$Message -ArgumentList $Log, $LastRun)
         Try { $EventLogFinal
             #Verify if any collections were made, if not script drops file creation and moves on.
             If ($EventLogFinal -ne $null){
                 Foreach($obj in $EventLogFinal){ 
                     $obj | TOMB-Json | 
                 Out-File -FilePath $Path\Files2Forward\Events\${Computer}_${Log}_logs.json -Append -Encoding UTF8
-            $EventLogFinal.RecordNumber[0] | Out-File -FilePath $Path\modules\DO_NOT_DELETE\${Computer}_${Log}_timestamp.log 
+                $EventLogFinal.RecordId[0] | Out-File -FilePath $Path\modules\DO_NOT_DELETE\${Computer}_${Log}_timestamp.log 
+                }
             }
-        }
             Else { 
-                "$(Get-Date) : $($Message)" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append
+                "$(Get-Date) : ${Message}" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append
                 }
             }
         #Any exception messages that were generated due to error are placed in the Errorlog: Windowslogs.log
-        Catch { 
-            "$(Get-Date): $($Error[0])" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log 
+        Catch {
+            If ($_.exception -like "*no events*"){
+                "$(Get-Date): No Events Found for $Computer" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log
+            }
+            Else {
+                "$(Get-Date): $($Error[0])" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log 
+            }
         }
     }
 }

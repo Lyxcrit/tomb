@@ -3,8 +3,8 @@
     Collects running Processs running on machine. Modular loaded via TOMB.ps1
 
     .NOTES
-    DATE:       18 FEB 19
-    VERSION:    1.0.4a
+    DATE:       27 FEB 19
+    VERSION:    1.0.5
     AUTHOR:     Brent Matlock -Lyx
          
      .DESCRIPTION

@@ -9,8 +9,8 @@
     **For SplunkForwarder setup please read the provided documentation or use the provided Splunk_Setup.ps1 for automated setup.**
     
     .NOTES
-    DATE:       18 FEB 19
-    VERSION:    1.0.4a
+    DATE:       27 FEB 19
+    VERSION:    1.0.5
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Domain
@@ -119,7 +119,7 @@ Function Main {
 }
 
 Function Collects {
-If("Service","Process","Signature","Registry","SchedTask","EventLog" -NotContains $Collects){ 
+If("Service","Process","Signature","Registry","SchedTask","EventLog","RunAll" -NotContains $Collects){ 
     "No valid collect present, please select valid option below:`r`n`r`n"
     "`tCollectName`tDescription`r`n`t------------`t------------- `
     `tService`t`tCollect Running Services`r`n`tProcess`t`tCollect Running Processes `
@@ -127,10 +127,12 @@ If("Service","Process","Signature","Registry","SchedTask","EventLog" -NotContain
     `tSignature`tCollect File Information (Version|MD5|SHA1) `
     `tSchedTask`tCollected Scheduled Task information`r`n`tRegistry`tCollect Key registry information `
     `tHost2IP`t`tCreates a table that correlates Hostname to IP Addresses`r`n `
+    `tRunAll`t`tRun all modules`r`n `
     `tListAll`t`tList all above modules`r`n"
     $Collects = Read-Host -Prompt "Enter Valid Collec: " 
     $Collects = $Collects -Split(",")}
 If ($null -eq $Thread){ $Threads = 50 }
+If ($Collects -eq "RunAll") { $Collects = @("Service","Process","Registry","Signature","SchedTask","EventLog","Host2IP")}
 If ($null -eq $Computer) {
     If (!($Domain)){ $ComputerList = $(Get-Content .\includes\tmp\StaticList.txt | Where {$_ -notmatch "^#"}) }
     Else { $ComputerList = $(Get-Content .\includes\tmp\DomainList.txt -ErrorAction SilentlyContinue ) } }

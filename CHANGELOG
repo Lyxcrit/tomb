@@ -1,12 +1,14 @@
 #Changelog
 All notable changes to this project will be documented in this file.
 
-##[Current Version: 1.0.4]
+##[Current Version: 1.0.5]
 ###Changed
 - Changed from creating scriptblocks to utilizing functions for remote operations
+- Event Collection now automatically gathers subfields from the message body
 - Changed some logic within the TOMB.ps1 to run smoother
 
 ### Added
+- Added additional collect features, ListAll and RunAll
 - Added additional module to collect Scheduled Tasks
 - Added ListAll value for -Collects that will display all current Collections
 - Input validation for Collects parameter. Now lists all modules and allows user chance to correct

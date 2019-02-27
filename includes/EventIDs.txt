@@ -169,7 +169,7 @@
 #4822	NTLM authentication failed because the account was a member of the Protected User group
 #4823	NTLM authentication failed because access control restrictions are required
 #4824	Kerberos preauthentication by using DES or RC4 failed because the account was a member of the Protected User group
-#4825	A user was denied the access to Remote Desktop. By default, users are allowed to connect only if they are members of the Remote Desktop Users group or Administrators group
+#4825	A user was denied the access to Remote Desktop.
 #4826	Boot Configuration Data loaded
 #4830	SID History was removed from an account
 #4864	A namespace collision was detected

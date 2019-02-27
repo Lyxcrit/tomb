@@ -39,6 +39,7 @@ Executing TOMB-Process.psm1 against single host
 ## CONTACT
     If you have a problem, questions, ideas, suggestion or contributing contact us by email:
     Brent.W.Matlock.mil@mail.mil
+    brent.matlock@gosplunk.com
 
 ## WEBSITE
     https://bitbucket.di2e.net/projects/EUCOMCPT/repos/tomb/browse
