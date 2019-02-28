@@ -1,0 +1,29 @@
+[props/TOMB_Process_Json]
+owner = splunk
+version = 7.2.4
+modtime = 1551296047.246249200
+
+[props/TOMB_Service_Json]
+owner = splunk
+version = 7.2.4
+modtime = 1551296185.322731900
+
+[props/TOMB_EventLog_Json]
+owner = splunk
+version = 7.2.4
+modtime = 1551296307.003090900
+
+[props/TOMB_Signatures_Json]
+owner = splunk
+version = 7.2.4
+modtime = 1551296474.408993300
+
+[props/TOMB_SchedTask_Json]
+owner = splunk
+version = 7.2.4
+modtime = 1551296596.009079900
+
+[props/TOMB_Registry_Json]
+owner = splunk
+version = 7.2.4
+modtime = 1551296701.195149200

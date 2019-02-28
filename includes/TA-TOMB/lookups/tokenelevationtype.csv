@@ -1,0 +1,4 @@
+TokenElevationType,TokenElevationTypeDescription
+%%1936,TokenElevationTypeDefault (1)
+%%1937,TokenElevationTypeFull (2)
+%%1938,TokenElevationTypeLimited (3)

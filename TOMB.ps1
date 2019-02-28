@@ -47,7 +47,8 @@ Param (
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $LogID,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][Int] $Threads,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String] $Server,
-    [Parameter(Mandatory = $true , ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Collects
+    [Parameter(Mandatory = $false , ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Collects,
+    [switch] $Setup
 )
 
 #Importing of modules located within the modules folder.
@@ -94,6 +95,10 @@ Function CredCheck {
 
 #Initial function to branch logic based off provided parameters.
 Function Main {
+    If ($Setup.IsPresent){
+        .\includes\SplunkSetup\SplunkTASetup.ps1
+        Breakdown
+    }
     #Gathering Domain Computers list if -Domain AND -Server are provided, typically used when NOT domain joined or using DNS
     If ($Domain -and $Server) {
         CredCheck

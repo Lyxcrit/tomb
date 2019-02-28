@@ -1,0 +1,16 @@
+AccessList,AccessListDescription
+%%4416,ReadData (or ListDirectory)
+%%4417,WriteData (or AddFile)
+%%4418,AppendData (or AddSubdirectory or CreatePipeInstance)
+%%4419,ReadEA
+%%4420,WriteEA
+%%4421,Execute/Traverse
+%%4422,DeleteChild
+%%4423,ReadAttributes
+%%4424,WriteAttributes
+%%1537,DELETE
+%%1538,READ_CONTROL
+%%1539,WRITE_DAC
+%%1540,WRITE_OWNER
+%%1542,ACCESS_SYS_SEC
+%%1543,MAX_ALLOWED
