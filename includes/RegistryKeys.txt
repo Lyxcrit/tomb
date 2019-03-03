@@ -1,0 +1,25 @@
+#
+# Provide Additional Registry Keys here for the default profile
+# This file assists with shrining the initial CLI parameters, you can also pull specific keys
+# by commenting them out here if you wish to avoid them or enter them with the -HiveKey param
+#
+REGISTRY::HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\
+REGISTRY::HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Run\
+REGISTRY::HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\RunOnce\
+REGISTRY::HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\RunOnce\Setup\
+REGISTRY::HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\RunOnceEx\
+REGISTRY::HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Run\
+REGISTRY::HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce\
+REGISTRY::HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce\Setup\
+REGISTRY::HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnceEx\
+REGISTRY::HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\
+REGISTRY::HKEY_USERS\\*\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\
+REGISTRY::HKEY_USERS\\*\Software\Microsoft\Windows\CurrentVersion\Run\
+REGISTRY::HKEY_USERS\\*\Software\Microsoft\Windows\CurrentVersion\RunOnce\
+REGISTRY::HKEY_USERS\\*\Software\Microsoft\Windows\CurrentVersion\RunOnce\Setup\
+REGISTRY::HKEY_USERS\\*\Software\Microsoft\Windows\CurrentVersion\RunOnceEx\
+REGISTRY::HKEY_USERS\\*\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\
+REGISTRY::HKEY_USERS\\*\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Run\
+REGISTRY::HKEY_USERS\\*\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce\
+REGISTRY::HKEY_USERS\\*\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce\Setup\
+REGISTRY::HKEY_USERS\\*\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnceEx\

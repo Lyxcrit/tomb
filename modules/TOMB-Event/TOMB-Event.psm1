@@ -9,8 +9,8 @@
     ensure each pull presents you with new data.
 
     .NOTES
-    DATE:       27 FEB 19
-    VERSION:    1.0.5
+    DATE:       03 MAR 19
+    VERSION:    1.1.0
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Computer
@@ -73,7 +73,7 @@ Function EventParse($Log, $LastRun) {
         $eventXML = [xml]$Event.ToXml()
         # Iterate through each one of the XML message properties
         For ($i=0; $i -lt $eventXML.Event.EventData.Data.Count; $i++) {
-            # Append these as object properties
+            # Grab properties and append values to each
             Add-Member -InputObject $Event -MemberType NoteProperty -Force `
                 -Name  $eventXML.Event.EventData.Data[$i].name `
                 -Value $eventXML.Event.EventData.Data[$i].'#text'
@@ -111,14 +111,15 @@ Function EventCollect($Computer, $LogID){
             }
         #Any exception messages that were generated due to error are placed in the Errorlog: Windowslogs.log
         Catch {
-            If ($_.exception -like "*no events*"){
-                "$(Get-Date): No Events Found for $Computer" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log
+            If ($_.exception -eq "*no events*"){
+                "$(Get-Date): No Events Found for ${Computer}" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log
             }
             Else {
                 "$(Get-Date): $($Error[0])" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log 
             }
         }
     }
+    Remove-Item '.\No events were found that match the specified selection criteria' -force
 }
 
 #Alias registration for deploying with -Collects parameter via TOMB.ps1

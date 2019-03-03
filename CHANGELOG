@@ -1,7 +1,33 @@
 #Changelog
 All notable changes to this project will be documented in this file.
 
-##[Current Version: 1.0.5]
+##[Current Version: 1.1.0]
+###Changed
+- Logic for Signatures and Registry collections were tweaked for better formatting
+
+### Added
+- Splunk setup script for TOMB-TA via SplunkTASetup.ps1
+- RegistryKeys.txt for Registry profiles located in \includes\ folder
+- Signature Orginization, Thumbprint and Status
+
+### Fixes
+- Issue with Registry collection that was not including the HiveKey for outputs
+- Issue with Signatures not being properly formatted
+- Issue with SplunkTASetup not properly passing user generated inputs.conf to Splunk install location
+
+### Issues 
+- EventLog conversion to XML may produce empty file stating no events count be found. This will be corrected next updates
+
+### TODO 
+- Create Wiki for Splunk TA and begin CIM compliant fields
+- Add additional modules to collect Startup processes/service
+- Add additional module to collect AutoRuns
+- Add additional module to establish baselines for Legitimate Windows processes
+- Add the ability to collect on OS outside of Windows
+
+=========================================================================================================================
+##[Previous Changes]
+##[Version 1.0.5]
 ###Changed
 - Changed from creating scriptblocks to utilizing functions for remote operations
 - Event Collection now automatically gathers subfields from the message body
@@ -25,7 +51,7 @@ All notable changes to this project will be documented in this file.
 - Add the ability to collect on OS outside of Windows
 
 =========================================================================================================================
-##[Previous Changes]
+
 ##[Version 1.0.4]
 ### Changed
 - Changed the way modules are loaded and remove during script execution

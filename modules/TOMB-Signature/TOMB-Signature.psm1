@@ -13,8 +13,8 @@
         FileName, Digital Signature, SHA1, MD5, FileVersion.
 
     .NOTES
-    DATE:       27 FEB 19
-    VERSION:    1.0.5
+    DATE:       03 MAR 19
+    VERSION:    1.1.0
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Computer
@@ -66,13 +66,13 @@ Function Sigs {
     $FileDirectory = Get-ChildItem -File "C:\Windows\System32\*", "C:\Program Files\*", "C:\Program Files (x86)\*", "C:\Users\*" `
                      -Include "*.txt","*.dll","*.exe", "*.rtf", "*.xls*" -Depth 10 -Recurse
     Foreach ($File in $FileDirectory) {
-        $Signature = (Get-AuthenticodeSignature "$File").SignerCertificate.Subject
-        $Sha1 = Get-FileHash -a SHA1 $File
-        $Sha1 = $Sha1.Hash
-        $MD5 = Get-FileHash -a MD5 $File
-        $MD5 = $MD5.Hash
+        $Signature = (Get-AuthenticodeSignature "$File").SignerCertificate.Thumbprint
+        $Org = (Get-AuthenticodeSignature "$File").SignerCertificate.DnsNameList.Unicode
+        $sigstatus = (Get-AuthenticodeSignature "$File").StatusMessage
+        $Sha1 = (Get-FileHash -a SHA1 $File).Hash
+        $MD5 = (Get-FileHash -a MD5 $File).Hash
         $FileVersion = Get-ChildItem $File | Foreach-Object { "{0}" -f [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_).FileVersion }
-        $obj = $obj + "[{ File: $File, Signature: $Signature, SHA1: $Sha1, MD5: $MD5, FileVersion: $FileVersion }]`r`n"
+        $obj = $obj + "{ File: $File, Signature: $Signature, Orginization: $Org, Status: $sigstatus, SHA1: $Sha1, MD5: $MD5, FileVersion: $FileVersion }`r`n"
     }
     return $obj
 }
@@ -82,7 +82,7 @@ Function SignatureCollect($Computer){
     Try { $Signatures
         If($Signatures -ne $null){
             Foreach($obj in $Signatures){
-                #Output is encoded with UTF8 in order to Splunk to parse correctly
+                #Output is encoded with UTF8 in order for Splunk to parse correctly
                 $obj | Out-File -FilePath $Path\Files2Forward\Signature\${Computer}_Signature.json -Append -Encoding utf8
             }
         }

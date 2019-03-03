@@ -8,8 +8,8 @@
     preventing the ability to prevent pulling the same log multiple times and ensure each pull presents you with new data.
 
     .NOTES
-    DATE:       27 FEB 19
-    VERSION:    1.0.5
+    DATE:       03 MAR 19
+    VERSION:    1.1.0
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Computer
@@ -32,7 +32,7 @@
 
 [cmdletbinding()]
 Param (
-    # ComputerName of the host you want to connect to.
+    #ComputerName of the host you want to connect to.
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Computer,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $HiveKey,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Path
@@ -49,62 +49,50 @@ Function TOMB-Registry($Computer, $HiveKey, $Path){
     Try {
         $ConnectionCheck = $(Test-Connection -Count 1 -ComputerName $Computer -ErrorAction Stop)
         }
-    #If host is unreachable this is placed into the Errorlog: Process.log
+    #If host is unreachable this is placed into the Errorlog: Registry.log
     Catch [System.Net.NetworkInformation.PingException] {
         "$(Get-Date): Host ${Computer} Status unreachable." |
         Out-File -FilePath $Path\logs\ErrorLog\registry.log -Append
+        break
         }
+    #If user cannot reach host due to permission requirements this is placed in Errorlog: Registry.log
     Catch [System.Management.Automation.Remoting.PSRemotingTransportException] {
         "$(Get-Date): Host ${Computer} Access Denied" |
         Out-File -FilePath $Path\logs\ErrorLog\registry.log -Append
+        break
     }
     If ($ConnectionCheck){ RegistryCollect($Computer) }
     Else {
-        "$(Get-Date) : $($Error[0])" | Out-File -FilePath $Path\logs\ErrorLog\registry.log -Append
+        break
     }
 }
 
 
 Function RegistryCollect($Computer, $HiveKey){
-    If ($HiveKey -EQ $null) {
-        [System.Array]$HiveKey = `
-            "REGISTRY::HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\",
-            "REGISTRY::HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Run\",
-            "REGISTRY::HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\RunOnce\",
-            "REGISTRY::HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\RunOnce\Setup\",
-            "REGISTRY::HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\RunOnceEx\",
-            "REGISTRY::HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Run\",
-            "REGISTRY::HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce\",
-            "REGISTRY::HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce\Setup\",
-            "REGISTRY::HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnceEx\",
-            "REGISTRY::HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\",
-            "REGISTRY::HKEY_USERS\\*\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\",
-            "REGISTRY::HKEY_USERS\\*\Software\Microsoft\Windows\CurrentVersion\Run\",
-            "REGISTRY::HKEY_USERS\\*\Software\Microsoft\Windows\CurrentVersion\RunOnce\",
-            "REGISTRY::HKEY_USERS\\*\Software\Microsoft\Windows\CurrentVersion\RunOnce\Setup\",
-            "REGISTRY::HKEY_USERS\\*\Software\Microsoft\Windows\CurrentVersion\RunOnceEx\",
-            "REGISTRY::HKEY_USERS\\*\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\",
-            "REGISTRY::HKEY_USERS\\*\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Run\",
-            "REGISTRY::HKEY_USERS\\*\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce\",
-            "REGISTRY::HKEY_USERS\\*\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce\Setup\",
-            "REGISTRY::HKEY_USERS\\*\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnceEx\"
-    }
+    If ($null -eq $HiveKey) {
+        [System.Array]$HiveKey = $(Get-Content .\includes\RegistryKeys.txt)           
+        }
     Foreach ($Key in $HiveKey) {
+        # Using scriptblock in order to keep lines short
         $Registry = "(Get-ItemProperty $Key -EA SilentlyContinue) | Select * -ExcludeProperty PS*,*Volume* "
         $Registries = [ScriptBlock]::Create($Registry)
-        $Registry_List = $(Invoke-Command -ComputerName $Computer -ScriptBlock $Registries -ErrorVariable Message 2>$Message)
+        $Registry_List = $(Invoke-Command -ComputerName $Computer -ScriptBlock $Registries -ArgumentList $Key -ErrorVariable Message 2>$Message)
         Try { $Registry_List
-            If ($Registy_List -ne $null){
+            If ($Registry_List -ne $null){
                 Foreach ($obj in $Registry_List){
-                    $obj | TOMB-Json | Out-File -FilePath $Path\Files2Forward\${Computer}_registry.json -Append -Encoding utf8
+                    #Add additional keypair so Hivekey is listed with content
+                    Add-Member -InputObject $obj -MemberType NoteProperty -Force -Name "Hive" -Value $Key
+                    $obj | TOMB-Json | Out-File -FilePath $Path\Files2Forward\Registry\${Computer}_registry.json -Append -Encoding utf8
                 }
             }
             Else {
-                "$(Get-Date) : $($Message)" | Out-File -File $Path\logs\ErrorLog\registry.log -Append
+                #Error Collection for remote side
+                "$(Get-Date) : ${Computer} : ${Message}" | Out-File -File $Path\logs\ErrorLog\registry.log -Append
             }
         }
         Catch {
-            "$(Get-Date) : $($Error[0])" | Out-File -FilePath $Path\logs\ErrorLog\registry.log
+            #Error Collection for local side
+            "$(Get-Date) : ${Computer} : $($Error[0]) " | Out-File -FilePath $Path\logs\ErrorLog\registry.log -Append
         }
     }
 }

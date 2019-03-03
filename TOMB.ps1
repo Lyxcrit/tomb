@@ -9,8 +9,8 @@
     **For SplunkForwarder setup please read the provided documentation or use the provided Splunk_Setup.ps1 for automated setup.**
     
     .NOTES
-    DATE:       27 FEB 19
-    VERSION:    1.0.5
+    DATE:       03 MAR 19
+    VERSION:    1.1.0
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Domain
@@ -56,14 +56,14 @@ $IncludeDir = Split-Path -parent $MyInvocation.MyCommand.Path
 #Adds the modules to $env:PSModulePath for the session
 $env:PSModulePath += ";$IncludeDir\modules"
 Import-Module -DisableNameChecking ActiveDirectory,
-#$IncludeDir\includes\GUI-Functions.ps1,    #Upcoming GUI implementation
+$IncludeDir\includes\GUI-Functions.ps1,
+$IncludeDir\modules\TOMB-Json\TOMB-Json.psm1,
 $IncludeDir\modules\TOMB-Event\TOMB-Event.psm1,
 $IncludeDir\modules\TOMB-Process\TOMB-Process.psm1,
+$IncludeDir\modules\TOMB-Host2IP\TOMB-Host2IP.psm1,
+$IncludeDir\modules\TOMB-Service\TOMB-Service.psm1,
 $IncludeDir\modules\TOMB-Registry\TOMB-Registry.psm1,
 $IncludeDir\modules\TOMB-Signature\TOMB-Signature.psm1,
-$IncludeDir\modules\TOMB-Host2IP\TOMB-Host2IP.psm1,
-$IncludeDir\modules\TOMB-Json\TOMB-Json.psm1,
-$IncludeDir\modules\TOMB-Service\TOMB-Service.psm1,
 $IncludeDir\modules\TOMB-ScheduledTask\TOMB-ScheduledTask.psm1 -Force 
 $CurrentFolder = $IncludeDir
 
@@ -76,7 +76,6 @@ $(Set-Variable -name LogID -Scope Global) 2>&1 | Out-null
 $(Set-Variable -name Collects -Scope Global) 2>&1 | Out-null
 $(Set-Variable -name Thread -Scope Global) 2>&1 | Out-Null
 $(Set-Variable -name CurrentFolder -Scope Global) 2>&1 | Out-Null
-$(Set-Variable -name Json_Convert -Scope Global) 2>&1 | Out-Null
 
 #Breakdown to restore PSModules, preventing overflow for continuous running of script.
 Function Breakdown {
@@ -90,14 +89,13 @@ Function CredCheck {
     Try { $credCheck = $(Get-ADUser -Filter * -Server $Server -ErrorAction Stop | Select-Object -First 1) }
     Catch [System.Security.Authentication.AuthenticationException] { Write-Host "Invalid Credentials" }
     Catch [Microsoft.ActiveDirectory.Management.ADServerDownException] { Write-Host "Active Directory Server Cannot be reached" }
-    If ($credCheck) { Main }
+    If (!($credCheck)) { Breakdown }
 } 
 
 #Initial function to branch logic based off provided parameters.
 Function Main {
-    If ($Setup.IsPresent){
-        .\includes\SplunkSetup\SplunkTASetup.ps1
-        Breakdown
+    If ($Setup -eq $true){
+        .\includes\SplunkSetup\SplunkTASetup.ps1 ; Breakdown
     }
     #Gathering Domain Computers list if -Domain AND -Server are provided, typically used when NOT domain joined or using DNS
     If ($Domain -and $Server) {
@@ -124,26 +122,15 @@ Function Main {
 }
 
 Function Collects {
-If("Service","Process","Signature","Registry","SchedTask","EventLog","RunAll" -NotContains $Collects){ 
-    "No valid collect present, please select valid option below:`r`n`r`n"
-    "`tCollectName`tDescription`r`n`t------------`t------------- `
-    `tService`t`tCollect Running Services`r`n`tProcess`t`tCollect Running Processes `
-    `tEventLog`tCollect EventLogs via -LogID OR profile in .\includes\EventIDs.txt `
-    `tSignature`tCollect File Information (Version|MD5|SHA1) `
-    `tSchedTask`tCollected Scheduled Task information`r`n`tRegistry`tCollect Key registry information `
-    `tHost2IP`t`tCreates a table that correlates Hostname to IP Addresses`r`n `
-    `tRunAll`t`tRun all modules`r`n `
-    `tListAll`t`tList all above modules`r`n"
-    $Collects = Read-Host -Prompt "Enter Valid Collec: " 
-    $Collects = $Collects -Split(",")}
 If ($null -eq $Thread){ $Threads = 50 }
-If ($Collects -eq "RunAll") { $Collects = @("Service","Process","Registry","Signature","SchedTask","EventLog","Host2IP")}
+If ($Collects -eq "RunAll") { [System.Array]$Collects = "Service","Process","Registry","Signature","SchedTask","EventLog"}
 If ($null -eq $Computer) {
     If (!($Domain)){ $ComputerList = $(Get-Content .\includes\tmp\StaticList.txt | Where {$_ -notmatch "^#"}) }
     Else { $ComputerList = $(Get-Content .\includes\tmp\DomainList.txt -ErrorAction SilentlyContinue ) } }
 Else { $ComputerList = $Computer }
 Foreach ($Computer in $ComputerList){
     Foreach ($obj in $Collects){
+        Write-Host "Collect: $obj"
         While ($(Get-Job -state running).count -ge $Threads){
             Start-Sleep -Milliseconds 500
         }
@@ -166,9 +153,9 @@ Foreach ($Computer in $ComputerList){
                                     TOMB-Event -Computer $Computer -LogId $LogID -Path $CurrentFolder} `
                       -ArgumentList $Computer, $LogID, $CurrentFolder, $Json_Convert }
         If ($obj -eq "Signature") {
-            Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Signature, TOMB-Json -Force } `
+            Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Signature -Force } `
                       -ScriptBlock { Param($Computer, $CurrentFolder) 
-                                    Import-Module -DisableNameChecking TOMB-Signature, TOMB-Json -Force
+                                    Import-Module -DisableNameChecking TOMB-Signature -Force
                                     TOMB-Signature -Computer $Computer -Path $CurrentFolder} `
                       -ArgumentList $Computer, $CurrentFolder }
         If ($obj -eq "SchedTask") {
@@ -183,9 +170,24 @@ Foreach ($Computer in $ComputerList){
                                     Import-Module -DisableNameChecking TOMB-Registry, TOMB-Json -Force
                                     TOMB-Registry -Computer $Computer -Path $CurrentFolder} `
                       -ArgumentList $Computer, $CurrentFolder }
-        If ($obj -eq "Host2IP") { .$obj $Server $Threads }
+        If ($obj -eq "Host2IP") { .$obj $Server }
         }
     }
+}
+
+Function NonValidCollect { 
+    "No Valid Collect provided. Please use one of the following:"
+    "Service:`t`tServices on host"
+    "Process:`t`tProcesses running on host"
+    "Signatures:`t`tDirwalk with SHA1|MD5|DigitalCert information"
+    "SchedTask:`t`tScheduled Task information from host"
+    "Registry:`t`tKey registry collection"
+    "EventLog:`t`tWindows Event Logs from host"
+    "Host2IP:`t`tGenerates lookup table for splunk dashboard 'Host and IP'"
+    "ListAll:`t`tProvide User with this menu"
+    "RunAll:`t`t`tRun all previously listed collections"
+    $Collects = Read-Host "Enter Valid Collect: "
+    Collects ($Collects)
 }
 
 Main

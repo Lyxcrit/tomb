@@ -3,8 +3,8 @@
     Collects scheduled tasks on machine. Modular loaded via TOMB.ps1
 
     .NOTES
-    DATE:       27 FEB 19
-    VERSION:    1.0.5
+    DATE:       03 MAR 19
+    VERSION:    1.1.0
     AUTHOR:     Brent Matlock -Lyx
          
      .DESCRIPTION

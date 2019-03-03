@@ -25,7 +25,6 @@
 
 
 #>
-
 Function SplunkDir {
     Clear-Host
 @"
@@ -33,7 +32,14 @@ Splunk TA Builder:`r`nThis will walk you thru the Splunk TA setup for TOMB`r`n
 Please supply the directories and I will take care of the rest"
 "@
     Write-Host "Where is Splunk located on your system?" -ForegroundColor Green
-    $baseDir = Read-Host 
+    "Default Shortcuts:"
+    "`tWindows`t`tProgram Files\Splunk`r`n`tWindowsFWD`tProgram Files\SplunkUniversalForwarder
+    `tLinux`t`t/opt/Splunk`r`n`tLinuxFWD`t/opt/SplunkUniversalForwarder"
+    $baseDir = Read-Host "`r`n`t>"
+    if ($baseDir -eq "Windows"){ $baseDir = "C:\Program Files\Splunk" }
+    if ($baseDir -eq "WindowsFWD"){ $baseDir = "C:\Program Files\SplunkUniversalForwarder" }
+    if ($baseDir -eq "Linux"){ $baseDir = "/opt/Splunk" }
+    if ($baseDir -eq "LinuxFWD"){ $baseDir = "/opt/SplunkUniversalForwarder/" }
     Write-Host "`r`nYou have entered: ${baseDir}, is this correct?" -ForegroundColor Green
     $confirmation = Read-Host "[Yes] or No"
     if ($confirmation -eq "No"){
@@ -52,7 +58,7 @@ Please supply the directories and I will take care of the rest"
 Function SplunkHost {
     Clear-Host
     Write-Host "What is the host name you wish to use for Splunk TOMB-TA?" -ForegroundColor Green
-    $hostname = Read-Host
+    $hostname = Read-Host ">"
     Write-Host "`r`nYou have entered: ${hostname}, is this correct?" -ForegroundColor Green
     $confirmation = Read-Host "[Yes] or No"
     if ($confirmation -eq "No"){
@@ -72,16 +78,23 @@ Function Inputs_Conf_Setup {
     Clear-Host
     (Get-Content .\includes\SplunkSetup\inputs_temp.conf).replace('<FILEPATH>',$baseDir).replace('<HOSTNAME>',$hostname) |
     Set-Content .\includes\SplunkSetup\inputs.conf
-    $TA_Folder = (${baseDir} + "\etc\apps\TA-TOMB") -replace '\\','\'
-    Copy-Item .\includes\SplunkSetup\TA-TOMB -Recurse -Destination $TA_Folder
+    Move-Item .\includes\SplunkSetup\inputs.conf .\includes\SplunkSetup\TA-TOMB\default -Force
+    $TA_Folder = ((${baseDir} + "\etc\apps\TA-TOMB") -replace '\\','\') -replace '//','/'
+    Copy-Item .\includes\SplunkSetup\TA-TOMB -Recurse -Destination $TA_Folder -FOrce
     "TA has been installed at ${baseDir}\etc\apps`r`nWould you like to restart the Splunk service now?"
     $confirmation = Read-Host "[Yes] or No"
     if ($confirmation -eq "No"){
         "Splunk Service will need to be restarted in order for changes to take affect"
     }
     if ($confirmation -eq "" -or $confirmation -eq "Yes") {
-        $Splunk = (${baseDir} + "\bin\splunk") -replace '\\','\'
-        cmd /c $Splunk restart
+        Try{ 
+            $Splunk = (${baseDir} + "\bin\") -replace '\\','\'
+            cd $Splunk ; .\Splunk restart
+        }
+        Catch {
+            $Splunk = (${basDir} + "/bin/") -replace '//','/'
+            cd $Splunk ; ./Splunk restart
+        }
         "Splunk is being restarted. Once Complete TOMB collections will apply the correct sourcetypes and index.`r`n"
     }
     Else {
