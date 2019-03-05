@@ -56,7 +56,7 @@ $IncludeDir = Split-Path -parent $MyInvocation.MyCommand.Path
 #Adds the modules to $env:PSModulePath for the session
 $env:PSModulePath += ";$IncludeDir\modules"
 Import-Module -DisableNameChecking ActiveDirectory,
-$IncludeDir\includes\GUI-Functions.ps1,
+#$IncludeDir\includes\GUI-Functions.ps1,   (Future GUI version in production)
 $IncludeDir\modules\TOMB-Json\TOMB-Json.psm1,
 $IncludeDir\modules\TOMB-Event\TOMB-Event.psm1,
 $IncludeDir\modules\TOMB-Process\TOMB-Process.psm1,
@@ -95,7 +95,7 @@ Function CredCheck {
 #Initial function to branch logic based off provided parameters.
 Function Main {
     If ($Setup -eq $true){
-        .\includes\SplunkSetup\SplunkTASetup.ps1 ; Breakdown
+        .\includes\SplunkSetup\SplunkTASetup.ps1 -Path $Path ; Breakdown
     }
     #Gathering Domain Computers list if -Domain AND -Server are provided, typically used when NOT domain joined or using DNS
     If ($Domain -and $Server) {

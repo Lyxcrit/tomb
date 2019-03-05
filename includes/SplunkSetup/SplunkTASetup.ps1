@@ -20,14 +20,16 @@
 
     DATE:       28 FEB 19
 
-    VERSION:    1.0.5
+    VERSION:    1.1.1
     AUTHOR:     Brent Matlock -Lyx
 
 
 #>
+$Path = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 Function SplunkDir {
     Clear-Host
 @"
+Current Path: $Path
 Splunk TA Builder:`r`nThis will walk you thru the Splunk TA setup for TOMB`r`n
 Please supply the directories and I will take care of the rest"
 "@
@@ -76,7 +78,7 @@ Function SplunkHost {
 
 Function Inputs_Conf_Setup {
     Clear-Host
-    (Get-Content .\includes\SplunkSetup\inputs_temp.conf).replace('<FILEPATH>',$baseDir).replace('<HOSTNAME>',$hostname) |
+    (Get-Content .\includes\SplunkSetup\inputs_temp.conf).replace('<FILEPATH>',$Path).replace('<HOSTNAME>',$hostname) |
     Set-Content .\includes\SplunkSetup\inputs.conf
     Move-Item .\includes\SplunkSetup\inputs.conf .\includes\SplunkSetup\TA-TOMB\default -Force
     $TA_Folder = ((${baseDir} + "\etc\apps\TA-TOMB") -replace '\\','\') -replace '//','/'
