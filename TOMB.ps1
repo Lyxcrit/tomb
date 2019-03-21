@@ -9,8 +9,8 @@
     **For SplunkForwarder setup please read the provided documentation or use the provided Splunk_Setup.ps1 for automated setup.**
     
     .NOTES
-    DATE:       03 MAR 19
-    VERSION:    1.1.0
+    DATE:       20 MAR 19
+    VERSION:    1.1.1
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Domain
@@ -20,19 +20,19 @@
     required orginizational unit to pull hosts from.
 
     .PARAMETER Server
+    Required Parameter when running against domain.
     Used to specify the Domain Controller you will be collecting from.
-    Used when not already domain joined, or when not using internal DNS where hosts reside.
 
     .PARAMETER Collects
     Used to specify the collections that are gathered from hosts.
     Parameter to be passed should be an array that is seperated by a comma(,).
 
     .PARAMETER Threads
-    Used to limit the number of parallel jobs. Must be used when using the -Domain parameter
+    Used to limit the number of parallel jobs. Default value is set to 50.
 
     .EXAMPLE
     Collection of processes, services and signature on domain foo.bar
-        TOMB -Collects Service,Process,Signatures -Domain "OU=foo,OU=bar"  -Server 8.8.8.8
+        TOMB -Collects Service,Process,Signatures -Domain "OU=foo,OU=bar" -Server 8.8.8.8 -Threads 25
 
     .EXAMPLE
     Collection for specific hosts without query of the domain.
@@ -94,22 +94,19 @@ Function CredCheck {
 
 #Initial function to branch logic based off provided parameters.
 Function Main {
-    If ($Setup -eq $true){
+    #Parameter Validation
+    <#If ($Domain -eq $true -and $Server -eq $false) {
+        Write-Host 'Must use -Server when using -Domain. Stopping Execution' -foreground Red ; Pause
+    }#>
+    #Used to run Splunk Setup for the TOMB TA
+    If ($Setup){
         .\includes\SplunkSetup\SplunkTASetup.ps1 -Path $Path ; Breakdown
     }
-    #Gathering Domain Computers list if -Domain AND -Server are provided, typically used when NOT domain joined or using DNS
+    #Required parameters for collecting against domain objects
     If ($Domain -and $Server) {
         CredCheck
-        If ($null -eq $Threads){ Write-Host "`r`n`r`nMust use '-Thread #' when using the '-Domain' switch. Stopping Execution" -foreground Red ; Pause}
-        Else {$Domain_Computers = $( Get-ADComputer -Filter * -Properties Name, DistinguishedName -Server $Server -SearchBase $Domain | Select-Object DNSHostName )
-        Foreach ($Hostx in $Domain_Computers) { ( $Hostx -replace "@{DNSHostName=", "" ) -replace "}", "" | Out-File -FilePath .\includes\tmp\DomainList.txt -Append}
-        Collects }
-    }
-    #Gathering Domain computers list if -Domain is provided without the -Server parameter, typically used with domain joined or using DNS
-    If ($Domain -and ($Server -eq "")) {
-        CredCheck
-        $Domain_Computers = $( Get-ADComputer -Filter * -Properties Name, DistinguishedName -SearchBase $Domain | Select-Object DNSHostName )
-        Foreach ($Hostx in $Domain_Computers) { ( $Hostx -replace "@{DNSHostName=", "" ) -replace "}", "" | Out-File -FilePath .\includes\tmp\DomainList.txt -Append}
+        $Domain_Computers = $( Get-ADComputer -Filter * -Properties Name, DistinguishedName -Server $Server -SearchBase $Domain | Select-Object DNSHostName )
+        Foreach ($Hostx in $Domain_Computers) { ( $Hostx -replace "@{DNSHostName=", "" ) -replace "}", "" | Out-File -FilePath .\includes\tmp\DomainList.txt -Append }
         Collects
     }
     #Used to run against listed computer(s)
@@ -130,7 +127,6 @@ If ($null -eq $Computer) {
 Else { $ComputerList = $Computer }
 Foreach ($Computer in $ComputerList){
     Foreach ($obj in $Collects){
-        Write-Host "Collect: $obj"
         While ($(Get-Job -state running).count -ge $Threads){
             Start-Sleep -Milliseconds 500
         }

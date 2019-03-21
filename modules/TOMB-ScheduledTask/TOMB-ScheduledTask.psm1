@@ -81,7 +81,7 @@ Function ScheduledTaskCollect($Computer){
         If($ScheduleTask -ne $null){
             Foreach($obj in $ScheduleTask){
                 #Output is encoded with UTF8 in order to Splunk to parse correctly
-                $obj | TOMB-Json | Out-File -FilePath $Path\Files2Forward\SchedTask\${Computer}_ScheduledTask.json -Append -Encoding utf8
+                $obj | TOMB-Json | Out-File -FilePath $Path\FIles2Forward\temp\SchedTask\${Computer}_ScheduledTask.json -Append -Encoding utf8
             }
         }
         Else {
@@ -92,6 +92,8 @@ Function ScheduledTaskCollect($Computer){
         "$(Get-Date): Host ${Computer} Status unreachable after."
     Out-File -FilePath $Path\logs\ErrorLog\scheduledtask.log
     }
+    Move-Item -Path $Path\Files2Forward\temp\SchedTask\${Computer}_ScheduledTask.json -Destination $Path\Files2Forward\SchedTask\${Computer}_ScheduledTask.json
+    Remove-Item -Path $Path\Files2Forward\temp\SchedTask\${Computer}_ScheduledTask.json
 }
 
 

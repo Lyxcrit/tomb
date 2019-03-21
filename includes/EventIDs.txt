@@ -1,3 +1,34 @@
+#
+#	Sysmon Events
+#
+#ID	Event Description
+#
+1	Process Creation
+#2	A process changed a file creation time
+#3	Network Connection
+#4	Sysmon service state changed
+#5	Process Terminated
+#6	Driver Loaded
+#7	Image Loaded
+#8	CreateRemoteThread
+#9	RawAccessRead
+#10	ProcessAccess
+#11	FileCreate
+#12	RegistryEvent (Object create and delete)
+#13	RegistryEvent (Value Set)
+#14	RegistryEvent (Key and Value rename)
+#15	FileCreateStreamHash
+#17	PipeEvent (Pipe Created)
+#18	PipeEvent (Pipe Connected)
+#19	WmiEvent (WmiEventFilter activity detected)
+#20	WmiEvent (WmiEventConsumer activity detected)
+#21	WmiEvent (WmiEventConsumerToFilter activity detected)
+#225	Error
+#
+#	Windows Events
+#
+#ID	Event Description
+#
 #1100	The event logging service has shut down
 #1101	Audit events have been dropped by the transport.
 #1102	The audit log was cleared

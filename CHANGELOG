@@ -1,7 +1,32 @@
 #Changelog
 All notable changes to this project will be documented in this file.
 
-##[Current Version: 1.1.0]
+##[Current Version: 1.1.1]
+###Changed
+- Tweaked parameters in order to avoid future confusion (See Issue #8 below)
+
+### Added
+- Temporary folder stucture for holding files while they are being wrote to, avoids splunkd.log errors while in batch mode (See Issue #9 below)
+
+### Fixes
+- Issue #3 - Incorrect stanza for Eventlog sourcetype corrected | Submitted by @jjrohr
+- Issue #4 - Incorrect stanza for SchedTask sourcetype corrected | Submitted by @jjrohr
+- Issue #6 - Windowslog.log overwritting itself due to missing -append | Submitted by @jjrohr
+- Issue #8 - Server parameter causes issue when DC is not running Active Directory Web Service, making this required | Submitted by @jjrohr
+- Issue #9 - Created temporary file structure to hold files until completion | Suggestion by @jjrohr
+
+### Issues 
+- Unfound solution for invalid parsing of events within splunk. Splunk has been found to pool multiple events within a single event
+
+### TODO 
+- Add additional modules to collect Startup processes/service
+- Add additional module to collect AutoRuns
+- Add additional module to establish baselines for Legitimate Windows processes
+- Add the ability to collect on OS outside of Windows
+
+=========================================================================================================================
+##[Previous Changes]
+##[Version 1.1.0]
 ###Changed
 - Logic for Signatures and Registry collections were tweaked for better formatting
 
@@ -26,7 +51,7 @@ All notable changes to this project will be documented in this file.
 - Add the ability to collect on OS outside of Windows
 
 =========================================================================================================================
-##[Previous Changes]
+
 ##[Version 1.0.5]
 ###Changed
 - Changed from creating scriptblocks to utilizing functions for remote operations

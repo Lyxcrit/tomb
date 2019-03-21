@@ -3,8 +3,8 @@
     Collects running services running on machine. Modular loaded via TOMB or TOMB_GUI.
 
     .NOTES
-    DATE:       03 MAR 19
-    VERSION:    1.1.0
+    DATE:       20 MAR 19
+    VERSION:    1.1.1
     AUTHOR:     Brent Matlock -Lyx
 
      .DESCRIPTION
@@ -66,7 +66,7 @@ Function ServiceCollect($Computer){
         If($Service_List -ne $null){
             Foreach($obj in $Service_List){
                 $obj | TOMB-Json |
-                Out-File -FilePath $Path\Files2Forward\Service\${Computer}_service.json -Append -Encoding utf8
+                Out-File -FilePath $Path\Files2Forward\temp\Service\${Computer}_service.json -Append -Encoding utf8
             }
         }
         Else {
@@ -77,6 +77,8 @@ Function ServiceCollect($Computer){
         "$(Get-Date): Host ${Computer} Status unreachable after." |
     Out-File -FilePath $Path\logs\ErrorLog\service.log -Append
     }
+    Move-Item -Path $Path\Files2Forward\temp\Service\${Computer}_service.json -Destination $Path\Files2Forward\Service\${Computer}_service.json
+    Remove-Item -Path $Path\Files2Forward\temp\Service\${Computer}_service.json
 }
 
 #Alias registration for deploying with -Collects parameter via TOMB.ps1

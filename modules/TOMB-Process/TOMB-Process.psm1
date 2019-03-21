@@ -3,8 +3,8 @@
     Collects running Processs running on machine. Modular loaded via TOMB.ps1
 
     .NOTES
-    DATE:       03 MAR 19
-    VERSION:    1.1.0
+    DATE:       20 MAR 19
+    VERSION:    1.1.1
     AUTHOR:     Brent Matlock -Lyx
          
      .DESCRIPTION
@@ -65,7 +65,7 @@ Function ProcessCollect($Computer){
         If($Process_List -ne $null){
             Foreach($obj in $Process_List){
                 #Output is encoded with UTF8 in order to Splunk to parse correctly
-                $obj | TOMB-Json | Out-File -FilePath $Path\Files2Forward\Process\${Computer}_Process.json -Append -Encoding utf8
+                $obj | TOMB-Json | Out-File -FilePath $Path\Files2Forward\temp\Process\${Computer}_Process.json -Append -Encoding utf8
             }
         }
         Else {
@@ -76,6 +76,8 @@ Function ProcessCollect($Computer){
         "$(Get-Date): Host ${Computer} Status unreachable after."
     Out-File -FilePath $Path\logs\ErrorLog\Process.log
     }
+    Move-Item -Path $Path\Files2Forward\temp\Process\${Computer}_Process.json -Destination $Path\Files2Forward\Process\${Computer}_Process.json
+    Remove-Item $Path\Files2Forward\temp\Process\${Computer}_Process.json
 }
 
 

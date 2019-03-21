@@ -36,7 +36,7 @@ Executing TOMB-Process.psm1 against single host
 
 ## AUTHORS
     Brent Matlock - Lyx
-
+    Joshua Rohr - jjrohr
 ## CONTACT
     If you have a problem, questions, ideas, suggestion or contributing contact us by email:
     Brent.W.Matlock.mil@mail.mil

@@ -9,8 +9,8 @@
     ensure each pull presents you with new data.
 
     .NOTES
-    DATE:       03 MAR 19
-    VERSION:    1.1.0
+    DATE:       20 MAR 19
+    VERSION:    1.1.1
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Computer
@@ -101,24 +101,26 @@ Function EventCollect($Computer, $LogID){
             If ($EventLogFinal -ne $null){
                 Foreach($obj in $EventLogFinal){ 
                     $obj | TOMB-Json | 
-                Out-File -FilePath $Path\Files2Forward\Events\${Computer}_${Log}_logs.json -Append -Encoding UTF8
+                Out-File -FilePath $Path\Files2Forward\temp\Events\${Computer}_${Log}_logs.json -Append -Encoding UTF8
                 $EventLogFinal.RecordId[0] | Out-File -FilePath $Path\modules\DO_NOT_DELETE\${Computer}_${Log}_timestamp.log 
                 }
             }
             Else { 
-                "$(Get-Date) : ${Message}" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append
+                "$(Get-Date) : ${Message} : ${Log}" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append
                 }
             }
         #Any exception messages that were generated due to error are placed in the Errorlog: Windowslogs.log
         Catch {
             If ($_.exception -eq "*no events*"){
-                "$(Get-Date): No Events Found for ${Computer}" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log
+                "$(Get-Date): No Events Found for ${Computer}:${Log}" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append
             }
             Else {
-                "$(Get-Date): $($Error[0])" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log 
+                "$(Get-Date): $($Error[0])" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append
             }
         }
     }
+    Move-Item -Path $Path\Files2Forward\temp\Events\${COmputer}_${Log}_logs.json -Destination $Path\Files2Forward\Events\${Computer}_${Log}_logs.json
+    Remove-Item $Path\Files2Forward\temp\Events\${COmputer}_${Log}_logs.json
     Remove-Item '.\No events were found that match the specified selection criteria' -force
 }
 

@@ -13,8 +13,8 @@
         FileName, Digital Signature, SHA1, MD5, FileVersion.
 
     .NOTES
-    DATE:       03 MAR 19
-    VERSION:    1.1.0
+    DATE:       20 MAR 19
+    VERSION:    1.1.1
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Computer
@@ -83,7 +83,7 @@ Function SignatureCollect($Computer){
         If($Signatures -ne $null){
             Foreach($obj in $Signatures){
                 #Output is encoded with UTF8 in order for Splunk to parse correctly
-                $obj | Out-File -FilePath $Path\Files2Forward\Signature\${Computer}_Signature.json -Append -Encoding utf8
+                $obj | Out-File -FilePath $Path\Files2Forward\temp\Signature\${Computer}_Signature.json -Append -Encoding utf8
             }
         }
         Else {
@@ -94,6 +94,8 @@ Function SignatureCollect($Computer){
         "$(Get-Date): Host ${Computer} Status unreachable after."
     Out-File -FilePath $Path\logs\ErrorLog\signature.log
     }
+    Move-Item -Path $Path\Files2Forward\temp\Signature\${Computer}_Signature.json -Destination $Path\Files2Forward\Signature\${Computer}_Signature.json
+    Remove-Item $Path\Files2Forward\temp\Signature\${Computer}_Signature.json
 }
 
 #Alias registration for deploying with -Collects parameter via TOMB.ps1
