@@ -95,9 +95,9 @@ Function CredCheck {
 #Initial function to branch logic based off provided parameters.
 Function Main {
     #Parameter Validation
-    <#If ($Domain -eq $true -and $Server -eq $false) {
+    If ($Domain -and (!($Server))) {
         Write-Host 'Must use -Server when using -Domain. Stopping Execution' -foreground Red ; Pause
-    }#>
+    }
     #Used to run Splunk Setup for the TOMB TA
     If ($Setup){
         .\includes\SplunkSetup\SplunkTASetup.ps1 -Path $Path ; Breakdown
