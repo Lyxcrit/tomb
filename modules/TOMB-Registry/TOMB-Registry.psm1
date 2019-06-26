@@ -8,8 +8,8 @@
     preventing the ability to prevent pulling the same log multiple times and ensure each pull presents you with new data.
 
     .NOTES
-    DATE:       20 MAR 19
-    VERSION:    1.1.1
+    DATE:       26 JUN 19
+    VERSION:    1.1.2b
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Computer
@@ -82,7 +82,7 @@ Function RegistryCollect($Computer, $HiveKey){
                 Foreach ($obj in $Registry_List){
                     #Add additional keypair so Hivekey is listed with content
                     Add-Member -InputObject $obj -MemberType NoteProperty -Force -Name "Hive" -Value $Key
-                    $obj | TOMB-Json | Out-File -FilePath $Path\Files2Forward\temp\Registry\${Computer}_registry.json -Append -Encoding utf8
+                    $obj | Convertto-Json -Compress | Out-File -FilePath $Path\Files2Forward\temp\Registry\${Computer}_registry.json -Append -Encoding utf8
                 }
             }
             Else {
@@ -95,8 +95,12 @@ Function RegistryCollect($Computer, $HiveKey){
             "$(Get-Date) : ${Computer} : $($Error[0]) " | Out-File -FilePath $Path\logs\ErrorLog\registry.log -Append
         }
     }
-    Move-Item -Path $Path\Files2Forward\temp\Registry\${Computer}_registry.json -Destination $Path\Files2Forward\Registry\${Computer}_registry.json
-    Remove-Item $Path\Files2Forward\temp\Registry\${Computer}_registry.json
+    CleanUp
+}
+
+Function CleanUp{
+    Move-Item -Path $Path\Files2Forward\temp\Registry\${Computer}_registry.json `
+    -Destination $Path\Files2Forward\Registry\${Computer}_registry.json
 }
 
 #Alias registration for deploying with -Collects via TOMB.ps1

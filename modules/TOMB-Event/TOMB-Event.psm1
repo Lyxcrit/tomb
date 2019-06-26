@@ -9,8 +9,8 @@
     ensure each pull presents you with new data.
 
     .NOTES
-    DATE:       20 MAR 19
-    VERSION:    1.1.1
+    DATE:       26 JUN 19
+    VERSION:    1.1.2b
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Computer
@@ -20,14 +20,14 @@
     Used to specify where output folder should be, by default when launched via TOMB.ps1 this is the execution path
     where TOMB.ps1 is invoked.
 
-    .PARAMETER LogID
-    Used to specify list of EventID to collect against, if not provided default list activates.
-    When this parameter is not provided the default profile is loaded from .\includes\EventIDs.txt to switch an event on/off 
-    simply comment or uncomment the specific line. Each event listed also provides a short description to make choices easier.
+    .PARAMETER -Profile
+    Used to specify different event identifiers to collect based off user preferences, or requirements.
+    Profiles are built in the /includes/ directory with the naming convention of "EventID_[profilename].txt", when parameter not present the
+    "default" profile is loaded.
 
     .EXAMPLE
-    Will Return Successful logins and logouts for localhost
-    TOMB-LogEventLog -Computer $env:COMPUTERNAME -LogID 4624,4625
+    Will Return Successful logins and logouts via profile UserAccess for localhost
+    TOMB-LogEventLog -Computer $env:COMPUTERNAME -Profile "UserAccess"
 #>
 
 [cmdletbinding()]
@@ -35,17 +35,18 @@ Param (
     # ComputerName of the host you want to connect to.
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Computer,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Path,
-    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $LogID
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String] $Profile
 )
 
 #Build Variable Scope
-$(Set-Variable -name Computer -Scope Global) 2>&1 | Out-null
-$(Set-Variable -name LogID -Scope Global) 2>&1 | Out-null
-$(Set-Variable -name Path -Scope Global) 2>&1 | Out-null
+$(Set-Variable -name Computer -Scope Global) 2>&1 | Out-Null
 $(Set-Variable -name LastRun -Scope Global) 2>&1 | Out-Null
+$(Set-Variable -name Profile -Scope Global) 2>&1 | Out-Null
+$(Set-Variable -name LogID -Scope Global) 2>&1 | Out-Null
+$(Set-Variable -name Path -Scope Global) 2>&1 | Out-Null
 
 #Main Script, collects Eventlogs off hosts and converts the output to Json format in preperation to send to Splunk
-Function TOMB-Event($Computer, $Path, $LogID) {
+Function TOMB-Event($Computer, $Path, $Profile) {
     cd $Path
     Try { 
         $ConnectionCheck = $(Test-Connection -Count 1 -ComputerName $Computer -ErrorAction Stop) 
@@ -59,14 +60,17 @@ Function TOMB-Event($Computer, $Path, $LogID) {
         "$(Get-Date): Host ${Computer} Access Denied" | 
         Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append 
         }
-    If ($ConnectionCheck){ EventCollect($Computer) }
-    Else { 
-        "$(Get-Date) : $($Error[0])" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append 
+    Catch [ParameterArgumentValidationError] {
+        "$(Get-Date): ComputerName Parameter invalid or null" |
+        Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append
+        }
+    If ($ConnectionCheck) {
+        EventCollect($Computer, $Profile)
     }
 }
 
 Function EventParse($Log, $LastRun) {
-    $Events = Get-WinEvent -FilterHashtable @{Logname='Security';Id=$($Log)} |
+    $Events = Get-WinEvent -LogName 'Security','Microsoft-Windows-Sysmon/Operational','System' -FilterXPath "*/System/EventID=$Log"|
               Where-Object -FilterScript { $_.RecordId -gt $LastRun }
     ForEach ($Event in $Events) {
         # Convert the event to XML
@@ -79,14 +83,13 @@ Function EventParse($Log, $LastRun) {
                 -Value $eventXML.Event.EventData.Data[$i].'#text'
         }
     }        
-    $obj = ($Events | Select-Object * -Exclude Message,*Properties,ActivityId,Bookmark,Keywords,Matched*,Opcode,Version)
+    $obj = ($Events | Select-Object *,@{N="EventID";E={$_.Id}} -Exclude Message,*Properties,ActivityId,Bookmark,Keywords,Matched*,Opcode,Version)
     return $obj
 }
 
-Function EventCollect($Computer, $LogID){
-    If ($null -eq $LogID) { 
-        $LogIDs = $(Get-content $Path\includes\EventIDs.txt | Where {$_ -notmatch "^#"}) 
-        }
+Function EventCollect {
+    If (!($Profile)) { $Profile = "Default" }
+    $LogIDs = $(Get-content $Path\includes\EventID_${Profile}.txt | Where {$_ -notmatch "^#"}) 
     Foreach ($LogID in $LogIDs) { 
         [string[]]$LogIDx += $LogID -Split("`t") | Select -First 1 
         }
@@ -95,33 +98,32 @@ Function EventCollect($Computer, $LogID){
         $LastRun = (Get-Content -Path $Path\modules\DO_NOT_DELETE\${Computer}_${Log}_timestamp.log -ErrorAction SilentlyContinue)
         If ($LastRun.Length -eq 0) { $LastRun = 1 }
         #Generation of the scriptblock and allows remote machine to read variables being passed.
-        $EventLogFinal = $(Invoke-Command -ComputerName $Computer -ScriptBlock ${function:EventParse} -ErrorVariable Message 2>$Message -ArgumentList $Log, $LastRun)
+        $EventLogFinal = $(Invoke-Command -ComputerName $Computer -ScriptBlock ${function:EventParse} -ErrorVariable Message 2>$Message -ErrorAction Stop -ArgumentList $Log, $LastRun)
         Try { $EventLogFinal
             #Verify if any collections were made, if not script drops file creation and moves on.
             If ($EventLogFinal -ne $null){
                 Foreach($obj in $EventLogFinal){ 
-                    $obj | TOMB-Json | 
-                Out-File -FilePath $Path\Files2Forward\temp\Events\${Computer}_${Log}_logs.json -Append -Encoding UTF8
-                $EventLogFinal.RecordId[0] | Out-File -FilePath $Path\modules\DO_NOT_DELETE\${Computer}_${Log}_timestamp.log 
+                    $obj | Convertto-Json -Compress | 
+                    Out-File -FilePath $Path\Files2Forward\temp\Events\${Computer}_${Log}_logs.json -Append -Encoding UTF8
+                    $EventLogFinal.RecordId[0] | Out-File -FilePath $Path\modules\DO_NOT_DELETE\${Computer}_${Log}_timestamp.log
                 }
             }
-            Else { 
-                "$(Get-Date) : ${Message} : ${Log}" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append
-                }
-            }
+        }
         #Any exception messages that were generated due to error are placed in the Errorlog: Windowslogs.log
         Catch {
+            "$(Get-Date): $(${Computer}), $(${Message})" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append
             If ($_.exception -eq "*no events*"){
                 "$(Get-Date): No Events Found for ${Computer}:${Log}" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append
             }
+            Elif($_.exception -eq "Parameter Cannot be set*"){
+                "$(Get-Date): Parameter fucked up" | Out-File -FilePath .\logs\ErrorLog\windowslog.log -Append
+            }
             Else {
-                "$(Get-Date): $($Error[0])" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append
+                "$(Get-Date): Test" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append
             }
         }
+    Move-Item -Path $Path\Files2Forward\temp\Events\${Computer}_${Log}_logs.json -Destination $Path\Files2Forward\Events\${Computer}_${Log}_logs.json
     }
-    Move-Item -Path $Path\Files2Forward\temp\Events\${COmputer}_${Log}_logs.json -Destination $Path\Files2Forward\Events\${Computer}_${Log}_logs.json
-    Remove-Item $Path\Files2Forward\temp\Events\${COmputer}_${Log}_logs.json
-    Remove-Item '.\No events were found that match the specified selection criteria' -force
 }
 
 #Alias registration for deploying with -Collects parameter via TOMB.ps1

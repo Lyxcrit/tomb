@@ -9,8 +9,8 @@
     **For SplunkForwarder setup please read the provided documentation or use the provided Splunk_Setup.ps1 for automated setup.**
     
     .NOTES
-    DATE:       20 MAR 19
-    VERSION:    1.1.1
+    DATE:       26 JUN 19
+    VERSION:    1.1.2b
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Domain
@@ -45,18 +45,21 @@ Param (
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.String] $Domain,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Computer,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $LogID,
-    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][Int] $Threads,
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String] $Profile,
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+    [ValidateRange(1,500)][Int] $Threads,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String] $Server,
-    [Parameter(Mandatory = $false , ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Collects,
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+    [ValidateSet("Process","Service","Signature","EventLog","SchedTask","Registry","RunAll")][System.Array] $Collects,
     [switch] $Setup
 )
 
 #Importing of modules located within the modules folder.
 $IncludeDir = Split-Path -parent $MyInvocation.MyCommand.Path
+
 #Adds the modules to $env:PSModulePath for the session
 $env:PSModulePath += ";$IncludeDir\modules"
 Import-Module -DisableNameChecking ActiveDirectory,
-#$IncludeDir\includes\GUI-Functions.ps1,   (Future GUI version in production)
 $IncludeDir\modules\TOMB-Json\TOMB-Json.psm1,
 $IncludeDir\modules\TOMB-Event\TOMB-Event.psm1,
 $IncludeDir\modules\TOMB-Process\TOMB-Process.psm1,
@@ -76,6 +79,7 @@ $(Set-Variable -name LogID -Scope Global) 2>&1 | Out-null
 $(Set-Variable -name Collects -Scope Global) 2>&1 | Out-null
 $(Set-Variable -name Thread -Scope Global) 2>&1 | Out-Null
 $(Set-Variable -name CurrentFolder -Scope Global) 2>&1 | Out-Null
+$(Set-Variable -name Profile -Scope Global) 2>&1 | Out-Null
 
 #Breakdown to restore PSModules, preventing overflow for continuous running of script.
 Function Breakdown {
@@ -107,18 +111,18 @@ Function Main {
         CredCheck
         $Domain_Computers = $( Get-ADComputer -Filter * -Properties Name, DistinguishedName -Server $Server -SearchBase $Domain | Select-Object DNSHostName )
         Foreach ($Hostx in $Domain_Computers) { ( $Hostx -replace "@{DNSHostName=", "" ) -replace "}", "" | Out-File -FilePath .\includes\tmp\DomainList.txt -Append }
-        Collects
+        Collects($Computer,$LogID)
     }
     #Used to run against listed computer(s)
     If ($Computer) {
-        Collects($Computer)
+        Collects($Computer,$LogID)
     }
     Else { 
         Collects
     }
 }
 
-Function Collects {
+Function Collects($Computer, $LogID) {
 If ($null -eq $Thread){ $Threads = 50 }
 If ($Collects -eq "RunAll") { [System.Array]$Collects = "Service","Process","Registry","Signature","SchedTask","EventLog"}
 If ($null -eq $Computer) {
@@ -128,14 +132,14 @@ Else { $ComputerList = $Computer }
 Foreach ($Computer in $ComputerList){
     Foreach ($obj in $Collects){
         While ($(Get-Job -state running).count -ge $Threads){
-            Start-Sleep -Milliseconds 500
+            Start-Sleep -Milliseconds 50
         }
         If ($obj -eq "Service") {
             Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Service, TOMB-Json -Force } `
                       -ScriptBlock { Param($Computer, $CurrentFolder, $Json_Convert) 
                                     Import-Module -DisableNameChecking TOMB-Service, TOMB-Json -Force
                                     TOMB-Service -Computer $Computer -Path $CurrentFolder} `
-                      -ArgumentList $Computer, $CurrentFolder, $Json_Convert }
+                      -ArgumentList $Computer, $CurrentFolder, $Json_Convert } 
         If ($obj -eq "Process") { 
 	        Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Process, TOMB-Json -Force } `
                       -ScriptBlock { Param($Computer, $CurrentFolder, $Json_Convert) 
@@ -144,10 +148,10 @@ Foreach ($Computer in $ComputerList){
                       -ArgumentList $Computer, $CurrentFolder, $Json_Convert }
         If ($obj -eq "EventLog") { 
             Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Event, TOMB-Json -Force } `
-                      -ScriptBlock { Param($Computer, $LogID, $CurrentFolder, $Json_Convert) 
+                      -ScriptBlock { Param($Computer, $Profile, $CurrentFolder, $Json_Convert) 
                                     Import-Module -DisableNameChecking TOMB-Event, TOMB-Json -Force
-                                    TOMB-Event -Computer $Computer -LogId $LogID -Path $CurrentFolder} `
-                      -ArgumentList $Computer, $LogID, $CurrentFolder, $Json_Convert }
+                                    TOMB-Event -Computer $Computer -Profile $Profile -Path $CurrentFolder} `
+                      -ArgumentList $Computer, $Profile, $CurrentFolder, $Json_Convert }
         If ($obj -eq "Signature") {
             Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Signature -Force } `
                       -ScriptBlock { Param($Computer, $CurrentFolder) 

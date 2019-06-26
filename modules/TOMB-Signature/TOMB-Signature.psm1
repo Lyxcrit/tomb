@@ -13,8 +13,8 @@
         FileName, Digital Signature, SHA1, MD5, FileVersion.
 
     .NOTES
-    DATE:       20 MAR 19
-    VERSION:    1.1.1
+    DATE:       26 JUN 19
+    VERSION:    1.1.2b
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Computer
@@ -62,28 +62,28 @@ Function TOMB-Signature($Computer, $Path){
 }
 
 #Prepare function to be passed to remote host
-Function Sigs {
-    $FileDirectory = Get-ChildItem -File "C:\Windows\System32\*", "C:\Program Files\*", "C:\Program Files (x86)\*", "C:\Users\*" `
-                     -Include "*.txt","*.dll","*.exe", "*.rtf", "*.xls*" -Depth 10 -Recurse
+Function Sigs($Computer) {
+    $FileDirectory = Get-ChildItem -File "C:\Windows\*", "C:\Program Files\*", "C:\Program Files (x86)\*", "C:\Users\*" -Include "*.dll","*.exe" -Depth 10 -Recurse
     Foreach ($File in $FileDirectory) {
         $Signature = (Get-AuthenticodeSignature "$File").SignerCertificate.Thumbprint
         $Org = (Get-AuthenticodeSignature "$File").SignerCertificate.DnsNameList.Unicode
         $sigstatus = (Get-AuthenticodeSignature "$File").StatusMessage
-        $Sha1 = (Get-FileHash -a SHA1 $File).Hash
+        $Sha256 = (Get-FileHash -a SHA256 $File).Hash
         $MD5 = (Get-FileHash -a MD5 $File).Hash
         $FileVersion = Get-ChildItem $File | Foreach-Object { "{0}" -f [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_).FileVersion }
-        $obj = $obj + "{ File: $File, Signature: $Signature, Orginization: $Org, Status: $sigstatus, SHA1: $Sha1, MD5: $MD5, FileVersion: $FileVersion }`r`n"
+        $obj = $obj + "{ ComputerName: $Computer, File: $File, Signature: $Signature, Orginization: $Org, Status: $sigstatus, SHA256: $Sha256, MD5: $MD5, FileVersion: $FileVersion }`r`n"
     }
     return $obj
 }
 
 Function SignatureCollect($Computer){
-    $Signatures = $(Invoke-Command -ComputerName $Computer -ScriptBlock ${function:Sigs} -ErrorVariable Message 2>$Message)
+    $Signatures = $(Invoke-Command -ComputerName $Computer -ScriptBlock ${function:Sigs} -ArgumentList $Computer -ErrorVariable Message 2>$Message)
     Try { $Signatures
         If($Signatures -ne $null){
             Foreach($obj in $Signatures){
                 #Output is encoded with UTF8 in order for Splunk to parse correctly
-                $obj | Out-File -FilePath $Path\Files2Forward\temp\Signature\${Computer}_Signature.json -Append -Encoding utf8
+                $timestamp = $((Get-Date).ToString("yyyMMdd-HHmm"))
+                $obj | Out-File -FilePath $Path\Files2Forward\temp\Signature\${Computer}_${timestamp}_Signature.json -Append -Encoding utf8
             }
         }
         Else {
@@ -91,11 +91,14 @@ Function SignatureCollect($Computer){
         }
     }
     Catch [System.Net.NetworkInformation.PingException] {
-        "$(Get-Date): Host ${Computer} Status unreachable after."
-    Out-File -FilePath $Path\logs\ErrorLog\signature.log
+        "$(Get-Date): Host ${Computer} Status unreachable after." | Out-File -FilePath $Path\logs\ErrorLog\signature.log
     }
-    Move-Item -Path $Path\Files2Forward\temp\Signature\${Computer}_Signature.json -Destination $Path\Files2Forward\Signature\${Computer}_Signature.json
-    Remove-Item $Path\Files2Forward\temp\Signature\${Computer}_Signature.json
+    CleanUp
+}
+
+Function CleanUp{
+    Move-Item -Path $Path\Files2Forward\temp\Signature\${Computer}_${timestamp}_Signature.json `
+    -Destination $Path\Files2Forward\Signature\${Computer}_${timestamp}_Signature.json
 }
 
 #Alias registration for deploying with -Collects parameter via TOMB.ps1

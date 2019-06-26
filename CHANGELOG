@@ -1,6 +1,27 @@
 #Changelog
 All notable changes to this project will be documented in this file.
 
+##[Current Version: 1.1.2b]
+###Changed
+- Temporary switch made to convertto-json over TOMB-Json as there is an issue with escaping characters.
+
+### Added
+- Additional Containers to TOMB-EventLog which was preventing sysmon collection
+
+### Fixes
+- No additional open issues on DI2E or Git
+
+### Issues 
+- Unfound solution for invalid parsing of events within splunk. Splunk has been found to pool multiple events within a single event
+
+### TODO 
+- Add additional modules to collect Startup processes/service
+- Add additional module to collect AutoRuns
+- Add additional module to establish baselines for Legitimate Windows processes
+- Add the ability to collect on OS outside of Windows
+
+=========================================================================================================================
+##[Previous Changes]
 ##[Current Version: 1.1.1]
 ###Changed
 - Tweaked parameters in order to avoid future confusion (See Issue #8 below)
@@ -25,7 +46,7 @@ All notable changes to this project will be documented in this file.
 - Add the ability to collect on OS outside of Windows
 
 =========================================================================================================================
-##[Previous Changes]
+
 ##[Version 1.1.0]
 ###Changed
 - Logic for Signatures and Registry collections were tweaked for better formatting
