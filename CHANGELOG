@@ -3,10 +3,11 @@ All notable changes to this project will be documented in this file.
 
 ##[Current Version: 1.1.2b]
 ###Changed
-- Temporary switch made to convertto-json over TOMB-Json as there is an issue with escaping characters.
+- Temporary switch made to convertto-json over TOMB-Json as there is an issue with escaping characters
 
 ### Added
 - Additional Containers to TOMB-EventLog which was preventing sysmon collection
+- Profiles switch for different eventlog collections based off requirements
 
 ### Fixes
 - No additional open issues on DI2E or Git
@@ -14,7 +15,8 @@ All notable changes to this project will be documented in this file.
 ### Issues 
 - Unfound solution for invalid parsing of events within splunk. Splunk has been found to pool multiple events within a single event
 
-### TODO 
+### TODO
+- Modify the Splunk TA setup for better formatting and removing additional whitespaces
 - Add additional modules to collect Startup processes/service
 - Add additional module to collect AutoRuns
 - Add additional module to establish baselines for Legitimate Windows processes
