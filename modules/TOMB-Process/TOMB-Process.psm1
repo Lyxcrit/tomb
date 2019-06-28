@@ -5,8 +5,8 @@
     be made via WMI(DCOM).
 
     .NOTES
-    DATE:       22 MAR 19
-    VERSION:    1.1.2
+    DATE:       27 JUN 19
+    VERSION:    1.1.2c
     AUTHOR:     Brent Matlock -Lyx
          
      .DESCRIPTION
@@ -107,7 +107,6 @@ Function ProcessWMI {
 Function CleanUp {
     Move-Item -Path $Path\Files2Forward\temp\Process\${Computer}_${timestamp}_Process.json `
     -Destination $Path\Files2Forward\Process\${Computer}_${timestamp}_Process.json
-    Remove-Item $Path\Files2Forward\temp\Process\${Computer}_${timestamp}_Process.json
 }
 
 #Alias registration for deploying with -Collects via TOMB.ps1

@@ -3,8 +3,8 @@
     Collects scheduled tasks on machine. Modular loaded via TOMB.ps1
 
     .NOTES
-    DATE:       26 JUN 19
-    VERSION:    1.1.2b
+    DATE:       27 JUN 19
+    VERSION:    1.1.2c
     AUTHOR:     Brent Matlock -Lyx
          
      .DESCRIPTION
@@ -83,7 +83,7 @@ Function ScheduledTaskCollect($Computer){
             Foreach($obj in $ScheduleTask){
                 #Output is encoded with UTF8 in order to Splunk to parse correctly
                 $timestamp = $((Get-Date).ToString("yyyMMdd-HHmm"))
-                $obj | Convertto-Json -Compress | 
+                $obj | TOMB-Json | 
                 Out-File -FilePath $Path\FIles2Forward\temp\SchedTask\${Computer}_${timestamp}_ScheduledTask.json -Append -Encoding utf8
             }
         }

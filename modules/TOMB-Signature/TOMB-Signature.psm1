@@ -13,8 +13,8 @@
         FileName, Digital Signature, SHA1, MD5, FileVersion.
 
     .NOTES
-    DATE:       26 JUN 19
-    VERSION:    1.1.2b
+    DATE:       27 JUN 19
+    VERSION:    1.1.2c
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Computer

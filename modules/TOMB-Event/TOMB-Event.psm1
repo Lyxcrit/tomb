@@ -9,8 +9,8 @@
     ensure each pull presents you with new data.
 
     .NOTES
-    DATE:       26 JUN 19
-    VERSION:    1.1.2b
+    DATE:       27 JUN 19
+    VERSION:    1.1.2c
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Computer
@@ -82,9 +82,9 @@ Function EventParse($Log, $LastRun) {
                 -Name  $eventXML.Event.EventData.Data[$i].name `
                 -Value $eventXML.Event.EventData.Data[$i].'#text'
         }
-    }        
-    $obj = ($Events | Select-Object *,@{N="EventID";E={$_.Id}} -Exclude Message,*Properties,ActivityId,Bookmark,Keywords,Matched*,Opcode,Version)
+    $obj = ($Events | Select-Object *,@{N="EventID";E={$_.Id}},@{N="RecordID";E={$_.RecordId}} -Exclude Message,*Properties,ActivityId,Bookmark,Keywords,Matched*,Opcode,Version)
     return $obj
+    }        
 }
 
 Function EventCollect {
@@ -103,7 +103,7 @@ Function EventCollect {
             #Verify if any collections were made, if not script drops file creation and moves on.
             If ($EventLogFinal -ne $null){
                 Foreach($obj in $EventLogFinal){ 
-                    $obj | Convertto-Json -Compress | 
+                    $obj | TOMB-Json | 
                     Out-File -FilePath $Path\Files2Forward\temp\Events\${Computer}_${Log}_logs.json -Append -Encoding UTF8
                     $EventLogFinal.RecordId[0] | Out-File -FilePath $Path\modules\DO_NOT_DELETE\${Computer}_${Log}_timestamp.log
                 }

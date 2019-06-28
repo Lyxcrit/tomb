@@ -3,8 +3,8 @@
     Collects running services running on machine. Modular loaded via TOMB or TOMB_GUI.
 
     .NOTES
-    DATE:       26 JUN 19
-    VERSION:    1.1.2b
+    DATE:       27 JUN 19
+    VERSION:    1.1.2c
     AUTHOR:     Brent Matlock -Lyx
 
      .DESCRIPTION
@@ -67,7 +67,7 @@ Function ServiceWinRM($Computer){
     Try { $Service_List
         If($Service_List -ne $null){
             Foreach($obj in $Service_List){
-                $obj | Convertto-Json -Compress |
+                $obj | TOMB-Json |
                 Out-File -FilePath $Path\Files2Forward\temp\Service\${Computer}_${timestamp}_service.json -Append -Encoding utf8
             }
         }
@@ -99,7 +99,7 @@ Function ServiceWMI{
     }
     Catch [System.Net.NetworkInformation.PingException] {
         "$(Get-Date): Host ${Computer} Status unreachable after." |
-    Out-File -FilePath $Path\logs\ErrorLog\service.log -Append
+        Out-File -FilePath $Path\logs\ErrorLog\service.log -Append
     }
     CleanUp
 }
