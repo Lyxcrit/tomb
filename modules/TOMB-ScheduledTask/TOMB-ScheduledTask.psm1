@@ -3,8 +3,8 @@
     Collects scheduled tasks on machine. Modular loaded via TOMB.ps1
 
     .NOTES
-    DATE:       03 MAR 19
-    VERSION:    1.1.0
+    DATE:       27 JUN 19
+    VERSION:    1.1.2c
     AUTHOR:     Brent Matlock -Lyx
          
      .DESCRIPTION
@@ -50,7 +50,8 @@ Function TOMB-ScheduledTask($Computer, $Path){
         "$(Get-Date): Host ${Computer} Access Denied" |
         Out-File -FilePath $Path\logs\ErrorLog\scheduledtask.log -Append
         }
-    If ($ConnectionCheck){ ScheduledTaskCollect($Computer) }
+    If ($ConnectionCheck){ ScheduledTaskCollect($Computer)}
+    #If ($ConnectionCheck){ ScheduledTaskCollect($Computer) }
     Else {
         "$(Get-Date) : ERROR MESSAGE : $($Error[0])" | Out-File -FilePath $Path\logs\ErrorLog\scheduledtask.log -Append
     }
@@ -71,7 +72,7 @@ Function SchedTask {
         NextRun = ($_ | Get-ScheduledTaskInfo).NextRunTime
         Status = $_.State
         Command = $_.Actions.execute
-        Arguments = $_.Actions.Arguments }}
+        Arguments = $_.Actions.Arguments } }
 }
 
 Function ScheduledTaskCollect($Computer){
@@ -81,19 +82,24 @@ Function ScheduledTaskCollect($Computer){
         If($ScheduleTask -ne $null){
             Foreach($obj in $ScheduleTask){
                 #Output is encoded with UTF8 in order to Splunk to parse correctly
-                $obj | TOMB-Json | Out-File -FilePath $Path\FIles2Forward\temp\SchedTask\${Computer}_ScheduledTask.json -Append -Encoding utf8
+                $timestamp = $((Get-Date).ToString("yyyMMdd-HHmm"))
+                $obj | TOMB-Json | 
+                Out-File -FilePath $Path\FIles2Forward\temp\SchedTask\${Computer}_${timestamp}_ScheduledTask.json -Append -Encoding utf8
             }
         }
         Else {
-            "$(Get-Date) : $($Message)" | Out-File -FilePath $Path\logs\ErrorLog\scheduledtask.log -Append
+            "$(Get-Date): Host ${Computer} Status unreachable after." | Out-File -FilePath $Path\logs\ErrorLog\scheduledtask.log -Append
         }
     }
     Catch [System.Net.NetworkInformation.PingException] {
-        "$(Get-Date): Host ${Computer} Status unreachable after."
-    Out-File -FilePath $Path\logs\ErrorLog\scheduledtask.log
+        "$(Get-Date): Host ${Computer} Status unreachable after." | Out-File -FilePath $Path\logs\ErrorLog\scheduledtask.log -Append
     }
-    Move-Item -Path $Path\Files2Forward\temp\SchedTask\${Computer}_ScheduledTask.json -Destination $Path\Files2Forward\SchedTask\${Computer}_ScheduledTask.json
-    Remove-Item -Path $Path\Files2Forward\temp\SchedTask\${Computer}_ScheduledTask.json
+    CleanUp
+}
+
+Function CleanUp { 
+    Move-Item -Path $Path\Files2Forward\temp\SchedTask\${Computer}_${timestamp}_ScheduledTask.json `
+    -Destination $Path\Files2Forward\SchedTask\${Computer}_${timestamp}_ScheduledTask.json
 }
 
 

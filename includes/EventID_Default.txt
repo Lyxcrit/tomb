@@ -53,7 +53,7 @@
 #4634	An account was logged off
 #4646	IKE DoS-prevention mode started
 #4647	User initiated logoff
-4648	A logon was attempted using explicit credentials
+#4648	A logon was attempted using explicit credentials
 #4649	A replay attack was detected
 #4650	An IPsec Main Mode security association was established
 #4651	An IPsec Main Mode security association was established
@@ -80,7 +80,7 @@
 #4673	A privileged service was called
 #4674	An operation was attempted on a privileged object
 #4675	SIDs were filtered
-#4688	A new process has been created
+4688	A new process has been created
 #4689	A process has exited
 #4690	An attempt was made to duplicate a handle to an object
 #4691	Indirect access to an object was requested
@@ -90,15 +90,15 @@
 #4695	Unprotection of auditable protected data was attempted
 #4696	A primary token was assigned to process
 #4697	A service was installed in the system
-4698	A scheduled task was created
-4699	A scheduled task was deleted
+#4698	A scheduled task was created
+#4699	A scheduled task was deleted
 #4700	A scheduled task was enabled
 #4701	A scheduled task was disabled
-4702	A scheduled task was updated
+#4702	A scheduled task was updated
 #4703	A token right was adjusted
-4704	A user right was assigned
+#4704	A user right was assigned
 #4705	A user right was removed
-4706	A new trust was created to a domain
+#4706	A new trust was created to a domain
 #4707	A trust to a domain was removed
 #4709	IPsec Services was started
 #4710	IPsec Services was disabled

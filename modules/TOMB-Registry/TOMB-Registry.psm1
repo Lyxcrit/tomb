@@ -8,8 +8,8 @@
     preventing the ability to prevent pulling the same log multiple times and ensure each pull presents you with new data.
 
     .NOTES
-    DATE:       20 MAR 19
-    VERSION:    1.1.1
+    DATE:       26 JUN 19
+    VERSION:    1.1.2b
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Computer
@@ -33,7 +33,7 @@
 [cmdletbinding()]
 Param (
     #ComputerName of the host you want to connect to.
-    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Computer,
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][string[]] $Computer,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $HiveKey,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Path
 )
@@ -44,7 +44,7 @@ $(Set-Variable -name HiveKey -Scope Global) 2>&1 | Out-null
 $(Set-Variable -name Path -Scope Global) 2>&1 | Out-null
 
 #Main Script, collects Registry off hosts and converts the output to Json format in preperation to send to Splunk
-Function TOMB-Registry($Computer, $HiveKey, $Path){
+Function TOMB-Registry($Computer, $Path) {
     cd $Path
     Try {
         $ConnectionCheck = $(Test-Connection -Count 1 -ComputerName $Computer -ErrorAction Stop)
@@ -61,42 +61,48 @@ Function TOMB-Registry($Computer, $HiveKey, $Path){
         Out-File -FilePath $Path\logs\ErrorLog\registry.log -Append
         break
     }
-    If ($ConnectionCheck){ RegistryCollect($Computer) }
+    If ($ConnectionCheck){ RegistryCollect }
     Else {
         break
     }
 }
 
-
-Function RegistryCollect($Computer, $HiveKey){
-    If ($null -eq $HiveKey) {
-        [System.Array]$HiveKey = $(Get-Content .\includes\RegistryKeys.txt)           
-        }
+Function Registries($HiveKey){
     Foreach ($Key in $HiveKey) {
         # Using scriptblock in order to keep lines short
-        $Registry = "(Get-ItemProperty $Key -EA SilentlyContinue) | Select * -ExcludeProperty PS*,*Volume* "
-        $Registries = [ScriptBlock]::Create($Registry)
-        $Registry_List = $(Invoke-Command -ComputerName $Computer -ScriptBlock $Registries -ArgumentList $Key -ErrorVariable Message 2>$Message)
-        Try { $Registry_List
-            If ($Registry_List -ne $null){
-                Foreach ($obj in $Registry_List){
-                    #Add additional keypair so Hivekey is listed with content
-                    Add-Member -InputObject $obj -MemberType NoteProperty -Force -Name "Hive" -Value $Key
-                    $obj | TOMB-Json | Out-File -FilePath $Path\Files2Forward\temp\Registry\${Computer}_registry.json -Append -Encoding utf8
-                }
-            }
-            Else {
-                #Error Collection for remote side
-                "$(Get-Date) : ${Computer} : ${Message}" | Out-File -File $Path\logs\ErrorLog\registry.log -Append
+        Get-Item $Key | Select-Object * -ExpandProperty property |
+        Select-Object *,@{N="computer_name";E={$_.PSComputerName}},@{N="ChildKey";E={$_.PSChildName}},@{N="Property";E={$_.Name+"\\"+$_}},@{N="KeyValue";E={$(Get-ItemProperty -Path $Key -Name $_)[0].$_}} `
+        -ExcludeProperty Name,property,Length,ValueCount,PSP*,PSI*,Handle,View,SubKeyCount,PSComputerName
+    }
+}
+
+Function RegistryCollect {
+    If ($null -eq $HiveKey) { [System.Array]$HiveKey = $(Get-Content $Path\includes\RegistryKeys.txt)}
+    $Registry_List = $(Invoke-Command -ComputerName $Computer -ScriptBlock ${function:Registries} -ArgumentList $HiveKey,$Computer -ErrorVariable Message 2>$Message)
+    Try { $Registry_List
+        If ($Registry_List -ne $null){
+            Foreach ($obj in $Registry_List){
+                #Add additional keypair so Hivekey is listed with content
+                #Add-Member -InputObject $obj -MemberType NoteProperty -Force -Name "Hive" -Value $Key
+                Add-Member -InputObject $obj -MemberType NoteProperty -Force -Name "computer_name" -Value ${Computer}
+                $obj | TOMB-Json | Out-File -FilePath $Path\Files2Forward\temp\Registry\${Computer}_registry.json -Append -Encoding utf8
             }
         }
-        Catch {
-            #Error Collection for local side
-            "$(Get-Date) : ${Computer} : $($Error[0]) " | Out-File -FilePath $Path\logs\ErrorLog\registry.log -Append
+        Else {
+            #Error Collection for remote side
+            "$(Get-Date) : ${Computer} : ${Message}" | Out-File -File $Path\logs\ErrorLog\registry.log -Append
         }
     }
-    Move-Item -Path $Path\Files2Forward\temp\Registry\${Computer}_registry.json -Destination $Path\Files2Forward\Registry\${Computer}_registry.json
-    Remove-Item $Path\Files2Forward\temp\Registry\${Computer}_registry.json
+    Catch {
+        #Error Collection for local side
+        "$(Get-Date) : ${Computer} : $($Error[0]) Was null " | Out-File -FilePath $Path\logs\ErrorLog\registry.log -Append
+    }
+    CleanUp
+}
+
+Function CleanUp{
+    Move-Item -Path $Path\Files2Forward\temp\Registry\${Computer}_registry.json `
+    -Destination $Path\Files2Forward\Registry\${Computer}_registry.json
 }
 
 #Alias registration for deploying with -Collects via TOMB.ps1

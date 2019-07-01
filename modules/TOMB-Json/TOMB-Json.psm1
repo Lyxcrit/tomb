@@ -7,8 +7,8 @@
     These functions provide that functionality for use when environment is not running with a newer version of PowerShell 3.0+
 
     .NOTES
-    DATE:       03 MAR 19
-    VERSION:    1.1.0
+    DATE:       26 JUN 19
+    VERSION:    1.1.2b
     AUTHOR:     Brent Matlock -Lyx
 
     .EXAMPLE
