@@ -101,6 +101,8 @@ Function RegistryCollect {
 }
 
 Function CleanUp{
+    (Get-Content $Path\Files2Forward\temp\Registry\${Computer}_registry.json) -replace "`t","" |
+    Out-File -FilePath $Path\Files2Forward\temp\Registry\${Computer}_registry.json -Encoding UTF8
     Move-Item -Path $Path\Files2Forward\temp\Registry\${Computer}_registry.json `
     -Destination $Path\Files2Forward\Registry\${Computer}_registry.json
 }

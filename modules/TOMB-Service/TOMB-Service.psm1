@@ -34,6 +34,7 @@ Param (
 
 #Build Variable Scope
 $timestamp = [Math]::Floor([decimal](Get-Date(Get-Date).ToUniversalTime()-uformat "%s"))
+$ts = $timestamp
 $(Set-Variable -name timestamp -Scope Global) 2>&1 | Out-null
 $(Set-Variable -name Computer -Scope Global) 2>&1 | Out-null
 $(Set-Variable -name Path -Scope Global) 2>&1 | Out-null
@@ -65,15 +66,15 @@ Function ServiceWinRM($Computer){
     $Services = [ScriptBlock]::Create($Service)
     $Service_List = $(Invoke-Command -ComputerName $Computer -ScriptBlock $Services -ErrorVariable Message 2>$Message)
     Try { $Service_List
-        If($Service_List -ne $null){
+        If($null -ne $Service_List){
             Foreach($obj in $Service_List){
                 $obj | TOMB-Json |
-                Out-File -FilePath $Path\Files2Forward\temp\Service\${Computer}_${timestamp}_service.json -Append -Encoding utf8
+                Out-File -FilePath $Path\Files2Forward\temp\Service\${Computer}_${ts}_service.json -Append -Encoding UTF8
             }
         }
         Else {
             #WinRM Failed, Move to WMI
-            "$(Get-Date) : $($Message)" | Out-File -FilePath $Path\logs\ErrorLog\service.log -Append
+            "$(Get-Date) : $($Message) : WinRM Failed" | Out-File -FilePath $Path\logs\ErrorLog\service.log -Append
             ServiceWMI
         }
     }
@@ -85,16 +86,16 @@ Function ServiceWinRM($Computer){
 }
 
 Function ServiceWMI{
-    $Service_List = $((Get-WmiObject -Class 'Win32_Service' -ComputerName $Computer -ErrorAction Stop) | Select * -Exclude __*,*Properties,*Path,QUalifiers,Scope,Options)
+    $Service_List = $((Get-WmiObject -Class 'Win32_Service' -ComputerName $Computer -ErrorAction Stop) | Select-Object * -Exclude __*,*Properties,*Path,QUalifiers,Scope,Options)
     Try{
-        If($Service_List -ne $null){
+        If($null -ne $Service_List){
             Foreach ($obj in $Service_List){
                 $obj | TOMB-Json |
-                Out-File -FilePath $Path\Files2Forward\temp\Service\${Computer}_${timestamp}_service.json -Append -Encoding utf8
+                Out-File -FilePath $Path\Files2Forward\temp\Service\${Computer}_${ts}_service.json -Append -Encoding UTF8
             }
         }
         Else {
-            "$(Get-Date) : $($Message)" | Out-File -FilePath $Path\logs\ErrorLog\service.log -Append
+            "$(Get-Date) : $($Message) : WMI Failed" | Out-File -FilePath $Path\logs\ErrorLog\service.log -Append
         }
     }
     Catch [System.Net.NetworkInformation.PingException] {
@@ -105,8 +106,9 @@ Function ServiceWMI{
 }
 
 Function CleanUp{
-    Move-Item -Path $Path\Files2Forward\temp\Service\${Computer}_${timestamp}.json 
-    -Destination $Path\Files2Forward\Service\${Computer}_${timestamp}_service.json
+    $File = $(Get-Content $Path\Files2Forward\temp\Service\${Computer}_${ts}_service.json) -replace "`t","" 
+    $File | Out-File -FilePath $Path\Files2Forward\Service\${Computer}_${ts}_service.json -Encoding UTF8 
+    Remove-Item $Path\Files2Forward\temp\Service\${Computer}_${ts}_service.json
 }
 
 #Alias registration for deploying with -Collects parameter via TOMB.ps1

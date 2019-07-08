@@ -16,6 +16,7 @@ The One Mission Builder (TOMB) is a project used to aid in the collection of art
 * Active Directory (RSAT)
 * SplunkUniversalForwarder 
 * WinRM Enabled
+* Sysmon
 ```
 
 ## Installing

@@ -37,6 +37,8 @@ Param (
 )
 
 #Build Variable Scope
+$timestamp = [Math]::Floor([decimal](Get-Date(Get-Date).ToUniversalTime()-uformat "%s"))
+$ts = $timestamp
 $(Set-Variable -name Computer -Scope Global) 2>&1 | Out-null
 $(Set-Variable -name Path -Scope Global) 2>&1 | Out-null
 
@@ -79,11 +81,10 @@ Function Sigs($Computer) {
 Function SignatureCollect($Computer){
     $Signatures = $(Invoke-Command -ComputerName $Computer -ScriptBlock ${function:Sigs} -ArgumentList $Computer -ErrorVariable Message 2>$Message)
     Try { $Signatures
-        If($Signatures -ne $null){
+        If($null -ne $Signatures){
             Foreach($obj in $Signatures){
                 #Output is encoded with UTF8 in order for Splunk to parse correctly
-                $timestamp = $((Get-Date).ToString("yyyMMdd-HHmm"))
-                $obj | Out-File -FilePath $Path\Files2Forward\temp\Signature\${Computer}_${timestamp}_Signature.json -Append -Encoding utf8
+                $obj | Out-File -FilePath $Path\Files2Forward\temp\Signature\${Computer}_${ts}_Signature.json -Append -Encoding utf8
             }
         }
         Else {
@@ -97,8 +98,9 @@ Function SignatureCollect($Computer){
 }
 
 Function CleanUp{
-    Move-Item -Path $Path\Files2Forward\temp\Signature\${Computer}_${timestamp}_Signature.json `
-    -Destination $Path\Files2Forward\Signature\${Computer}_${timestamp}_Signature.json
+    $File = $(Get-Content -FilePath $Path\Files2Forward\temp\Signature\${Computer}_Signature.json) -replace "`t",""
+    $File | Out-File -FilePath $Path\Files2Forward\Signature\${Computer}_${ts}_Signature.json -Encoding UTF8
+    Remove-Item -Path $Path\Files2Forward\temp\Signature\${Computer}_Signature.json
 }
 
 #Alias registration for deploying with -Collects parameter via TOMB.ps1

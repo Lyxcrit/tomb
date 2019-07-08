@@ -35,6 +35,7 @@ Param (
 
 #Build Variable Scope
 $timestamp = [Math]::Floor([decimal](Get-Date(Get-Date).ToUniversalTime()-uformat "%s"))
+$ts = $timestamp
 $(Set-Variable -name timestamp -Scope Global) 2>&1 | Out-null
 $(Set-Variable -name Computer -Scope Global) 2>&1 | Out-null
 $(Set-Variable -name Path -Scope Global) 2>&1 | Out-null 
@@ -62,18 +63,19 @@ Function TOMB-Process($Computer, $Path){
 
 Function ProcessWinRM($Computer){
     #Generation of the scriptblock and allows remote machine to read variables being passed.
-    $Process = "(Get-WmiObject -Class 'Win32_Process' -ErrorAction Stop) | Select * -Exclude __*,*Properties,*Path,Qualifiers,Scope,Options"
+    $Process = "(Get-WmiObject -Class 'Win32_Process' -ErrorAction Stop) | Select-Object * -Exclude __*,*Properties,*Path,Qualifiers,Scope,Options"
     $Processes = [ScriptBlock]::Create($Process)
-    $Process_List = $(Invoke-Command -ComputerName $Computer -ScriptBlock $Processes -ErrorVariable Message 2>$Message)
+    $Process_List = $(Invoke-Command -ComputerName $Computer -ScriptBlock $Processes ) #-ErrorVariable Message 2>$Message)
     Try { $Process_List
-        If($Process_List -ne $null){
+        If($null -ne $Process_List){
             Foreach($obj in $Process_List){
                 #Output is encoded with UTF8 in order to Splunk to parse correctly
-                $obj | TOMB-Json | Out-File -FilePath $Path\Files2Forward\temp\Process\${Computer}_${timestamp}_Process.json -Append -Encoding utf8
+                $obj | TOMB-Json | Out-File -FilePath $Path\Files2Forward\temp\Process\${Computer}_${ts}_Process.json -Append -Encoding utf8
             }
         }
         Else {
             # WinRM Failed, most to WMI (DCOM)
+            "$(Get-Date) : $($Message) : WinRM Failed" | Out-File -FilePath $Path\logs\ErrorLog\Process.log -Append
             ProcessWMI
         }
     }
@@ -85,28 +87,29 @@ Function ProcessWinRM($Computer){
 
 Function ProcessWMI {
     $Process_List = $((Get-WmiObject -Class 'Win32_Process' -ComputerName -ErrorAction Stop -ErrorVariable Message 2>$Message) | `
-                    Select * -Exclude __*,*Properties,*Path,Qualifiers,Scope,Options)
+                    Select-Object * -Exclude __*,*Properties,*Path,Qualifiers,Scope,Options)
     Try{ 
-        If($Process_List -ne $null){
+        If($null -ne $Process_List){
             Foreach ($obj in $Process_List){
                 $obj | TOMB-Json |
-                Out-File -FilePath $Path\Files2Forward\temp\Process\${Computer}_${timestamp}_Process.json -Append -Encoding utf8
+                Out-File -FilePath $Path\Files2Forward\temp\Process\${Computer}_${ts}_Process.json -Append -Encoding utf8
             }
         }
         Else {
-            "$(Get-Date) : $($Message)" | Out-File -FilePath $Path\logs\ErrorLog\Process.log -Append
+            "$(Get-Date) : $($Message) : WMI Failed" | Out-File -FilePath $Path\logs\ErrorLog\Process.log -Append
         }
     }
     Catch [System.Net.NetworkInformation.PingException] {
-        "$(Get-Date): Host ${Computer} Status unreachable after."
-    Out-File -FilePath $Path\logs\ErrorLog\Process.log
+        "$(Get-Date): Host ${Computer} Status unreachable after." |
+        Out-File -FilePath $Path\logs\ErrorLog\Process.log
     }
     CleanUp
 }
 
 Function CleanUp {
-    Move-Item -Path $Path\Files2Forward\temp\Process\${Computer}_${timestamp}_Process.json `
-    -Destination $Path\Files2Forward\Process\${Computer}_${timestamp}_Process.json
+    $File = $(Get-Content $Path\Files2Forward\temp\Process\${Computer}_${ts}_Process.json) -replace "`t",""
+    $File | Out-File -FilePath $Path\Files2Forward\Process\${Computer}_${ts}_Process.json -Encoding UTF8
+    Remove-Item -Path $Path\Files2Forward\temp\Process\${Computer}_${ts}_Process.json
 }
 
 #Alias registration for deploying with -Collects via TOMB.ps1

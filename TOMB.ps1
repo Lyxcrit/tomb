@@ -111,18 +111,18 @@ Function Main {
         CredCheck
         $Domain_Computers = $( Get-ADComputer -Filter * -Properties Name, DistinguishedName -Server $Server -SearchBase $Domain | Select-Object DNSHostName )
         Foreach ($Hostx in $Domain_Computers) { ( $Hostx -replace "@{DNSHostName=", "" ) -replace "}", "" | Out-File -FilePath .\includes\tmp\DomainList.txt -Append }
-        Collects($Computer,$LogID, $Profile)
+        Collects #($Computer,$LogID, $Profile)
     }
     #Used to run against listed computer(s)
     If ($Computer) {
-        Collects($Computer,$LogID, $Profile)
+        Collects #($Computer,$LogID, $Profile)
     }
     Else { 
         Collects
     }
 }
 
-Function Collects($Computer, $LogID, $Profile) {
+Function Collects { #($Computer, $LogID, $Profile) {
 If ($null -eq $Thread){ $Threads = 50 }
 If ($Collects -eq "RunAll") { [System.Array]$Collects = "Service","Process","Registry","Signature","SchedTask","EventLog"}
 If ($null -eq $Computer) {

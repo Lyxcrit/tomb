@@ -39,6 +39,8 @@ Param (
 )
 
 #Build Variable Scope
+$timestamp = [Math]::Floor([decimal](Get-Date(Get-Date).ToUniversalTime()-uformat "%s"))
+$ts = $timestamp
 $(Set-Variable -name Computer -Scope Global) 2>&1 | Out-Null
 $(Set-Variable -name LastRun -Scope Global) 2>&1 | Out-Null
 $(Set-Variable -name Profile -Scope Global) 2>&1 | Out-Null
@@ -70,7 +72,7 @@ Function TOMB-Event($Computer, $Path, $Profile) {
 }
 
 Function EventParse($Log, $LastRun) {
-    $Events = Get-WinEvent -LogName 'Security','Microsoft-Windows-Sysmon/Operational','System' -FilterXPath "*/System/EventID=$Log"|
+    $Events = Get-WinEvent -LogName 'System','Security' -FilterXPath "*/System/EventID=$Log" |
               Where-Object -FilterScript { $_.RecordId -gt $LastRun }
     ForEach ($Event in $Events) {
         # Convert the event to XML
@@ -82,16 +84,29 @@ Function EventParse($Log, $LastRun) {
                 -Name  $eventXML.Event.EventData.Data[$i].name `
                 -Value $eventXML.Event.EventData.Data[$i].'#text'
         }
-    $obj = ($Events | Select-Object *,@{N="EventID";E={$_.Id}},@{N="RecordID";E={$_.RecordId}} -Exclude Message,*Properties,ActivityId,Bookmark,Keywords,Matched*,Opcode,Version)
+        $obj = $($Event | Select-Object *,@{N="EventID";E={$_.Id}}, 
+                                        @{N="RecordID";E={$_.RecordId}},
+                                        @{N="ComputerName";E={$_.MachineName}},
+                                        @{N="MD5";E={$_.Hashes -replace "MD5=",""}},
+                                        @{N="SHA1";E={$_.Hashes -replace "SHA1=",""}},
+                                        @{N="SHA256";E={$_.Hashes -replace "SHA256=",""}},
+                                        @{N="Description";E={$_.KeywordsDisplayNames}},
+                                        @{N="ProcessID";E={[Convert]::ToInt64($_.ProcessId,16)}},
+                                        @{N="NewProcessID";E={[Convert]::ToInt64($_.NewProcessId,16)}},
+                                        @{N="SubjectLogonID";E={[Convert]::ToInt64($_.SubjectLogonId,16)}},
+                                        @{N="TargetLogonID";E={[Convert]::ToInt64($_.TargetLogonId,16)}},
+                                        @{N="TimeCreated";E={[DateTime]$_.TimeCreated -replace '\\/'.""}} `
+        -Exclude Message,*Properties,Bookmark,*Keyword*,Matched*,Provider*,ActivityId,Id,Opcode,Version,MachineName,Hashes, `
+                 *ActivityId,Qualifiers,ProcessId,NewProcessId,SubjectLogonId,TimeCreated,RecordId,TargetLogonId)
     return $obj
     }        
 }
 
 Function EventCollect {
     If (!($Profile)) { $Profile = "Default" }
-    $LogIDs = $(Get-content $Path\includes\EventID_${Profile}.txt | Where {$_ -notmatch "^#"}) 
+    $LogIDs = $(Get-content $Path\includes\EventID_${Profile}.txt | Where-Object {$_ -notmatch "^#"}) 
     Foreach ($LogID in $LogIDs) { 
-        [string[]]$LogIDx += $LogID -Split("`t") | Select -First 1 
+        [string[]]$LogIDx += $LogID -Split("`t") | Select-Object -First 1 
         }
     Foreach ($Log in $LogIDx) {
         #Verify that Timestamp exists, if not found sets date to Current-30Days
@@ -101,11 +116,12 @@ Function EventCollect {
         $EventLogFinal = $(Invoke-Command -ComputerName $Computer -ScriptBlock ${function:EventParse} -ErrorVariable Message 2>$Message -ErrorAction Stop -ArgumentList $Log, $LastRun)
         Try { $EventLogFinal
             #Verify if any collections were made, if not script drops file creation and moves on.
-            If ($EventLogFinal -ne $null){
+            If ($null -ne $EventLogFinal){
                 Foreach($obj in $EventLogFinal){ 
-                    $obj | TOMB-Json | 
-                    Out-File -FilePath $Path\Files2Forward\temp\Events\${Computer}_${Log}_logs.json -Append -Encoding UTF8
-                    $EventLogFinal.RecordId[0] | Out-File -FilePath $Path\modules\DO_NOT_DELETE\${Computer}_${Log}_timestamp.log
+                    $obj | TOMB-Json -Compress | 
+                    Out-File -FilePath $Path\Files2Forward\temp\Events\${Computer}_${Log}_logs.json -Append # -Encoding UTF8
+                    $obj.RecordID[0] | Out-File -FilePath $Path\modules\DO_NOT_DELETE\${Computer}_${Log}_timestamp.log
+                    CleanUp
                 }
             }
         }
@@ -122,8 +138,13 @@ Function EventCollect {
                 "$(Get-Date): Test" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append
             }
         }
-    Move-Item -Path $Path\Files2Forward\temp\Events\${Computer}_${Log}_logs.json -Destination $Path\Files2Forward\Events\${Computer}_${Log}_logs.json
     }
+}
+
+Function CleanUp {
+    $File = $(Get-Content $Path\Files2Forward\temp\Events\${Computer}_${Log}_logs.json)
+    $File | Out-File -FilePath $Path\Files2Forward\Events\${Computer}_${Log}_${ts}_logs.json -Encoding UTF8
+    Remove-Item -Path "${Path}\Files2Forward\temp\Events\${Computer}_${Log}_logs.json"
 }
 
 #Alias registration for deploying with -Collects parameter via TOMB.ps1
