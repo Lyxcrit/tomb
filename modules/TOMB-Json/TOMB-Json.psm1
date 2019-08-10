@@ -207,5 +207,5 @@ function TOMB-Json {
 
 
 #Alias registration for deploying with -Collects parameter via TOMB.ps1
-New-Alias -Name TOMB-Json20 -Value TOMB-Json
+New-Alias -Name Json -Value TOMB-Json
 Export-ModuleMember -Alias * -Function * -ErrorAction SilentlyContinue

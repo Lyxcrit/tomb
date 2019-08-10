@@ -9,8 +9,8 @@
     **For SplunkForwarder setup please read the provided documentation or use the provided Splunk_Setup.ps1 for automated setup.**
     
     .NOTES
-    DATE:       27 JUN 19
-    VERSION:    1.1.2c
+    DATE:       09 AUG 19
+    VERSION:    1.1.4
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Domain
@@ -37,6 +37,9 @@
     .EXAMPLE
     Collection for specific hosts without query of the domain.
         TOMB.ps1 -Collects Service,Process -Computer localhost
+    .EXAMPLE
+    Use specific WinRM/WMI/DCOM collection methods
+        TOMB.ps1 -Collects RunAll -Domain "OU=foo,OU=bar" -Server 8.8.8.8 -Method WinRM
 #>
 
 #Provides TOMB the ability to use commandline parameters via tabbing
@@ -51,6 +54,7 @@ Param (
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String] $Server,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
     [ValidateSet("Process","Service","Signature","EventLog","SchedTask","Registry","RunAll")][System.Array] $Collects,
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String] $Method,
     [switch] $Setup
 )
 
@@ -80,6 +84,7 @@ $(Set-Variable -name Collects -Scope Global) 2>&1 | Out-null
 $(Set-Variable -name Thread -Scope Global) 2>&1 | Out-Null
 $(Set-Variable -name CurrentFolder -Scope Global) 2>&1 | Out-Null
 $(Set-Variable -name Profile -Scope Global) 2>&1 | Out-Null
+$(Set-Variable -name Method -Scope Global) 2>&1 | Out-Null
 
 #Breakdown to restore PSModules, preventing overflow for continuous running of script.
 Function Breakdown {
@@ -138,14 +143,14 @@ Foreach ($Computer in $ComputerList){
             Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Service, TOMB-Json -Force } `
                       -ScriptBlock { Param($Computer, $CurrentFolder, $Json_Convert) 
                                     Import-Module -DisableNameChecking TOMB-Service, TOMB-Json -Force
-                                    TOMB-Service -Computer $Computer -Path $CurrentFolder} `
-                      -ArgumentList $Computer, $CurrentFolder, $Json_Convert } 
+                                    TOMB-Service -Computer $Computer -Path $CurrentFolder -Method $Method} `
+                      -ArgumentList $Computer, $CurrentFolder, $Json_Convert, $Method } 
         If ($obj -eq "Process") { 
 	        Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Process, TOMB-Json -Force } `
                       -ScriptBlock { Param($Computer, $CurrentFolder, $Json_Convert) 
                                     Import-Module -DisableNameChecking TOMB-Process, TOMB-Json -Force
-                                    TOMB-Process -Computer $Computer -Path $CurrentFolder} `
-                      -ArgumentList $Computer, $CurrentFolder, $Json_Convert }
+                                    TOMB-Process -Computer $Computer -Path $CurrentFolder -Method $Method} `
+                      -ArgumentList $Computer, $CurrentFolder, $Json_Convert, $Method }
         If ($obj -eq "EventLog") { 
             Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Event, TOMB-Json -Force } `
                       -ScriptBlock { Param($Computer, $Profile, $CurrentFolder, $Json_Convert) 
@@ -156,8 +161,8 @@ Foreach ($Computer in $ComputerList){
             Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Signature -Force } `
                       -ScriptBlock { Param($Computer, $CurrentFolder) 
                                     Import-Module -DisableNameChecking TOMB-Signature -Force
-                                    TOMB-Signature -Computer $Computer -Path $CurrentFolder} `
-                      -ArgumentList $Computer, $CurrentFolder }
+                                    TOMB-Signature -Computer $Computer -Path $CurrentFolder -Method $Method} `
+                      -ArgumentList $Computer, $CurrentFolder, $Method }
         If ($obj -eq "SchedTask") {
             Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-ScheduledTask, TOMB-Json -Force } `
                       -ScriptBlock { Param($Computer, $CurrentFolder) 
