@@ -117,9 +117,9 @@ Function Connection-CollectWinRM($Computer){
     $Connection_List = $(Invoke-Command -ComputerName $Computer -ScriptBlock $Connections -ErrorVariable Message 2>$Message)
     Try { $Connection_List
         If($null -ne $Connection_List){
-            #Add state description and protocol properties to log
-            Foreach ($obj in $Connection_List){Add-Member -NotePropertyName Protocol -NotePropertyValue 'UDP'
-            }   
+            #Add protocol properties to log
+            Foreach ($obj in $Connection_List){$obj | Add-Member -NotePropertyName Protocol -NotePropertyValue 'UDP'
+            }
             Foreach($obj in $Connection_List){
                 $obj | Json -Compress |
                 Out-File -FilePath $Path\Files2Forward\temp\Connection\${Computer}_connection.json -Append -Encoding UTF8
@@ -166,7 +166,7 @@ Function Connection-CollectWMI{
     $Connection = $((Get-WmiObject -Class 'MSFT_NetUDPEndpoint' -Namespace root/standardcimv2) | Select-Object CreationTime,LocalAddress,LocalPort,OwningProcess)
     Try{
         If($null -ne $Connection_List){
-            #Add state description and protocol properties to log
+            #Add protocol properties to log
             Foreach ($obj in $Connection_List){$obj | Add-Member -NotePropertyName Protocol -NotePropertyValue 'UDP'}
             Foreach ($obj in $Connection_List){
                 $obj | Json -Compress |
@@ -220,7 +220,7 @@ Function Connection-CollectCIM {
         New-CimSession -ComputerName $Computer -Name $Computer -SessionOption $SessionOption -SkipTestConnection
          $Connection_List = $(Get-CimInstance -Class MSFT_NetUDPEndpoint -Namespace root/standardcimv2 | Select-Object CreationTime,LocalAddress,LocalPort,OwningProcess)                          
         If($null -ne $Connection_List){
-            #Add state description and protocol properties to log
+            #Add protocol properties to log
             Foreach ($obj in $Connection_List){$obj | Add-Member -NotePropertyName Protocol -NotePropertyValue 'UDP'}
             Foreach ($obj in $Connection_List){
                 $obj | Add-Member -MemberType NoteProperty -Name ComputerName -Value $Computer 
