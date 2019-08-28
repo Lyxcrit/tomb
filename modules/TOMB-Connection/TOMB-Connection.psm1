@@ -112,7 +112,7 @@ Function Connection-CollectWinRM($Computer){
            Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append
     }
 
-    $Connection = "(Get-WmiObject -Class 'MSFT_NetUDPEndpoint' -Namespace root/standardcimv2) | Select-Object CreationTime,LocalAddress,LocalPort,OwningProcess"
+    $Connection = "(Get-WmiObject -Class 'MSFT_NetUDPEndpoint' -Namespace root/standardcimv2) | Select-Object CreationTime,LocalAddress,LocalPort,OwningProcess,state,RemotePort,RemoteAddress"
     $Connections = [ScriptBlock]::Create($Connection)
     $Connection_List = $(Invoke-Command -ComputerName $Computer -ScriptBlock $Connections -ErrorVariable Message 2>$Message)
     Try { $Connection_List
@@ -163,7 +163,7 @@ Function Connection-CollectWMI{
         "$(Get-Date): ${Computer} : WMI Collection failed, or Host no longer available" |
            Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append
     }
-    $Connection = $((Get-WmiObject -Class 'MSFT_NetUDPEndpoint' -Namespace root/standardcimv2) | Select-Object CreationTime,LocalAddress,LocalPort,OwningProcess)
+    $Connection = $((Get-WmiObject -Class 'MSFT_NetUDPEndpoint' -Namespace root/standardcimv2) | Select-Object CreationTime,LocalAddress,LocalPort,OwningProcess,state,RemotePort,RemoteAddress)
     Try{
         If($null -ne $Connection_List){
             #Add protocol properties to log
@@ -218,7 +218,7 @@ Function Connection-CollectCIM {
     Try{
         $SessionOption = New-CimSessionOption -Protocol DCOM
         New-CimSession -ComputerName $Computer -Name $Computer -SessionOption $SessionOption -SkipTestConnection
-         $Connection_List = $(Get-CimInstance -Class MSFT_NetUDPEndpoint -Namespace root/standardcimv2 | Select-Object CreationTime,LocalAddress,LocalPort,OwningProcess)                          
+         $Connection_List = $(Get-CimInstance -Class MSFT_NetUDPEndpoint -Namespace root/standardcimv2 | Select-Object CreationTime,LocalAddress,LocalPort,OwningProcess,state,RemotePort,RemoteAddress)                          
         If($null -ne $Connection_List){
             #Add protocol properties to log
             Foreach ($obj in $Connection_List){$obj | Add-Member -NotePropertyName Protocol -NotePropertyValue 'UDP'}
