@@ -1,6 +1,27 @@
 #Changelog
 All notable changes to this project will be documented in this file.
 
+##[Current Version: 1.1.5]
+###Changed
+- Corrected TOMB-Json not correctly escaping quotes, which lead to broken fields in Splunk
+
+### Added
+- Additional TOMB Module (TOMB-Connection) provided by @sirwilhelm
+
+### Fixes
+- No additional open issues on DI2E or Git
+
+### Issues 
+- No additional open issues on DI2E or Git
+
+### TODO
+- Add additional modules to collect Startup processes/service
+- Add additional module to collect AutoRuns
+- Add additional module to establish baselines for Legitimate Windows processes
+- Add the ability to collect on OS outside of Windows
+
+=========================================================================================================================
+##[Previous Changes]
 ##[Current Version: 1.1.2c]
 ###Changed
 - Corrected TOMB-Json not correctly escaping quotes, which lead to broken fields in Splunk

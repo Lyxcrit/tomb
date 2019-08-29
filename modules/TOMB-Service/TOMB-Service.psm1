@@ -5,8 +5,8 @@
     be made via WMI(RPC) and finally attempt to connect via CIM(DCOM)
 
     .NOTES
-    DATE:       09 AUG 19
-    VERSION:    1.1.4
+    DATE:       29 AUG 19
+    VERSION:    1.1.5
     AUTHOR:     Brent Matlock -Lyx
 
      .DESCRIPTION
@@ -134,7 +134,7 @@ Function Service-CollectCIM {
         $SessionOption = New-CimSessionOption -Protocol DCOM
         New-CimSession -ComputerName $Computer -Name $Computer -SessionOption $SessionOption -SkipTestConnection
         $Service_List = $(Get-CimInstance -ComputerName $Computer -ClassName Win32_Service | 
-                          Select * -Exclude __*,*Properties,*Path,Qualifiers,Scope,Options)                          
+                          Select-Object * -Exclude __*,*Properties,*Path,Qualifiers,Scope,Options)                          
         If($null -ne $Service_List){
             Foreach ($obj in $Service_List){
                 $obj | Add-Member -MemberType NoteProperty -Name ComputerName -Value $Computer 
@@ -156,8 +156,8 @@ Function Service-CollectCIM {
 }
 
 Function CleanUp{
-    Move-Item -Path $Path\Files2Forward\temp\Process\${Computer}_service.json `
-              -Destination $Path\Files2Forward\Process\${Computer}_${ts}_service.json
+    Move-Item -Path $Path\Files2Forward\temp\Service\${Computer}_service.json `
+              -Destination $Path\Files2Forward\Service\${Computer}_${ts}_service.json
     Remove-Item $Path\Files2Forward\temp\Service\${Computer}_service.json
 }
 

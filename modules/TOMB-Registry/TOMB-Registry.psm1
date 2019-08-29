@@ -8,8 +8,8 @@
     preventing the ability to prevent pulling the same log multiple times and ensure each pull presents you with new data.
 
     .NOTES
-    DATE:       26 JUN 19
-    VERSION:    1.1.2b
+    DATE:       29 AUG 19
+    VERSION:    1.1.5
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Computer
@@ -101,10 +101,9 @@ Function RegistryCollect {
 }
 
 Function CleanUp{
-    (Get-Content $Path\Files2Forward\temp\Registry\${Computer}_registry.json) -replace "`t","" |
-    Out-File -FilePath $Path\Files2Forward\temp\Registry\${Computer}_registry.json -Encoding UTF8
     Move-Item -Path $Path\Files2Forward\temp\Registry\${Computer}_registry.json `
-    -Destination $Path\Files2Forward\Registry\${Computer}_registry.json
+              -Destination $Path\Files2Forward\Registry\${Computer}_${ts}_registry.json
+    Remove-Item -Path $Path\Files2Forward\temp\Registry\${Computer}_registry.json
 }
 
 #Alias registration for deploying with -Collects via TOMB.ps1

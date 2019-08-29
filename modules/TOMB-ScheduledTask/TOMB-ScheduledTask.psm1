@@ -3,8 +3,8 @@
     Collects scheduled tasks on machine. Modular loaded via TOMB.ps1
 
     .NOTES
-    DATE:       27 JUN 19
-    VERSION:    1.1.2c
+    DATE:       29 AUG 19
+    VERSION:    1.1.5
     AUTHOR:     Brent Matlock -Lyx
          
      .DESCRIPTION
@@ -84,8 +84,8 @@ Function ScheduledTaskCollect($Computer){
         If($null -ne $ScheduleTask){
             Foreach($obj in $ScheduleTask){
                 #Output is encoded with UTF8 in order to Splunk to parse correctly
-                $obj | TOMB-Json | 
-                Out-File -FilePath $Path\FIles2Forward\temp\SchedTask\${Computer}_${ts}_ScheduledTask.json -Append -Encoding utf8
+                $obj | Json -Compress | 
+                Out-File -FilePath $Path\FIles2Forward\temp\SchedTask\${Computer}_ScheduledTask.json -Append -Encoding utf8
             }
         }
         Else {
@@ -99,8 +99,8 @@ Function ScheduledTaskCollect($Computer){
 }
 
 Function CleanUp { 
-    $File = $(Get-Content $Path\Files2Forward\temp\SchedTask\${Computer}_${ts}_ScheduledTask.json) -replace "`t",""
-    $File | Out-File -FilePath $Path\Files2Forward\SchedTask\${Computer}_${ts}_ScheduledTask.json -Encoding UTF8
+    Move-Item -Path $Path\Files2Forward\temp\SchedTask\${Computer}_ScheduledTask.json `
+              -Destination $Path\Files2Forward\SchedTask\${Computer}_${ts}_ScheduledTask.json
     Remove-Item -Path $Path\Files2Forward\temp\SchedTask\${Computer}_${ts}_ScheduledTask.json
 }
 

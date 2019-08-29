@@ -5,8 +5,8 @@
     be made via WMI(RPC) and finally attempt to connect via CIM(DCOM)
 
     .NOTES
-    DATE:       28 AUG 19
-    VERSION:    1.1.4 
+    DATE:       29 AUG 19
+    VERSION:    1.1.5 
     AUTHOR:     Brent Matlock -Lyx
 
      .DESCRIPTION
@@ -99,17 +99,17 @@ Function Connection-CollectWinRM($Computer){
                 Out-File -FilePath $Path\Files2Forward\temp\Connection\${Computer}_connection.json -Append -Encoding UTF8
             }
         #WinRM TCP Success
-        "$(Get-Date) : ${Message} : WinRM TCP Success" | Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append
+        "$(Get-Date) : ${Message} : WinRM TCP Success" | Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append -Encoding UTF8
         }
         Else {
             #WinRM Failed, Move to WMI
-            "$(Get-Date) : ${Message} : WinRM Failed" | Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append
+            "$(Get-Date) : ${Message} : WinRM Failed" | Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append -Encoding UTF8
                Connection-CollectWMI
         }
     }
     Catch [System.Net.NetworkInformation.PingException] {
         "$(Get-Date): ${Computer} : WinRM Collection failed, or Host no longer available" |
-           Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append
+           Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append -Encoding UTF8
     }
 
     $Connection = "(Get-WmiObject -Class 'MSFT_NetUDPEndpoint' -Namespace root/standardcimv2) | Select-Object CreationTime,LocalAddress,LocalPort,OwningProcess,state,RemotePort,RemoteAddress"
@@ -125,17 +125,17 @@ Function Connection-CollectWinRM($Computer){
                 Out-File -FilePath $Path\Files2Forward\temp\Connection\${Computer}_connection.json -Append -Encoding UTF8
             }
         #WinRM UDP Success
-        "$(Get-Date) : ${Message} : WinRM UDP Success" | Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append
+        "$(Get-Date) : ${Message} : WinRM UDP Success" | Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append -Encoding UTF8
         }
         Else {
             #WinRM Failed, Move to WMI
-            "$(Get-Date) : ${Message} : WinRM Failed" | Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append
+            "$(Get-Date) : ${Message} : WinRM Failed" | Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append -Encoding UTF8
                Connection-CollectWMI
         }
     }
     Catch [System.Net.NetworkInformation.PingException] {
         "$(Get-Date): ${Computer} : WinRM Collection failed, or Host no longer available" |
-           Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append
+           Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append -Encoding UTF8
     }
     CleanUp
 }
@@ -152,16 +152,16 @@ Function Connection-CollectWMI{
                 Out-File -FilePath $Path\Files2Forward\temp\Connection\${Computer}_connection.json -Append -Encoding UTF8
             }
         #WMI TCP Success
-        "$(Get-Date) : WMI TCP Collection Success" | Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append
+        "$(Get-Date) : WMI TCP Collection Success" | Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append -Encoding UTF8
         }
         Else {
-            "$(Get-Date) : ${Message} : WMI Failed" | Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append
+            "$(Get-Date) : ${Message} : WMI Failed" | Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append -Encoding UTF8
                ConnectionCIM
         }
     }
     Catch [System.Net.NetworkInformation.PingException] {
         "$(Get-Date): ${Computer} : WMI Collection failed, or Host no longer available" |
-           Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append
+           Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append -Encoding UTF8
     }
     $Connection = $((Get-WmiObject -Class 'MSFT_NetUDPEndpoint' -Namespace root/standardcimv2) | Select-Object CreationTime,LocalAddress,LocalPort,OwningProcess,state,RemotePort,RemoteAddress)
     Try{
@@ -173,16 +173,16 @@ Function Connection-CollectWMI{
                 Out-File -FilePath $Path\Files2Forward\temp\Connection\${Computer}_connection.json -Append -Encoding UTF8
             }
         #WMI UDP Success
-        "$(Get-Date) : WMI UDP Collection Success" | Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append
+        "$(Get-Date) : WMI UDP Collection Success" | Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append -Encoding UTF8
         }
         Else {
-            "$(Get-Date) : ${Message} : WMI Failed" | Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append
+            "$(Get-Date) : ${Message} : WMI Failed" | Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append -Encoding UTF8
                ConnectionCIM
         }
     }
     Catch [System.Net.NetworkInformation.PingException] {
         "$(Get-Date): ${Computer} : WMI Collection failed, or Host no longer available" |
-           Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append
+           Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append -Encoding UTF8
     }
     CleanUp
 }
@@ -203,17 +203,17 @@ Function Connection-CollectCIM {
                 Out-File -FilePath $Path\Files2Forward\temp\Connection\${Computer}_connection.json -Append -Encoding utf8
             }
         #CIM Success
-        "$(Get-Date) : ${Message} : CIM TCP Collection Success" | Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append
+        "$(Get-Date) : ${Message} : CIM TCP Collection Success" | Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append -Encoding UTF8
 
         }
         Else {
             "$(Get-Date): ${Computer} : CIM Collection failed, or Host no longer available" |
-               Out-File -FilePath $Path\logs\ErrorLog\Connection.log -Append
+               Out-File -FilePath $Path\logs\ErrorLog\Connection.log -Append -Encoding UTF8
         }
     }
     Catch {
         "$(Get-Date): ${Computer} : CIM Connection error" |
-           Out-File -FilePath $Path\logs\ErrorLog\Connection.log -Append
+           Out-File -FilePath $Path\logs\ErrorLog\Connection.log -Append -Encoding UTF8
     }
     Try{
         $SessionOption = New-CimSessionOption -Protocol DCOM
@@ -228,17 +228,17 @@ Function Connection-CollectCIM {
                 Out-File -FilePath $Path\Files2Forward\temp\Connection\${Computer}_connection.json -Append -Encoding utf8
             }
         #CIM Success
-        "$(Get-Date) : ${Message} : CIM UDP Collection Success" | Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append
+        "$(Get-Date) : ${Message} : CIM UDP Collection Success" | Out-File -FilePath $Path\logs\ErrorLog\connection.log -Append -Encoding UTF8
 
         }
         Else {
             "$(Get-Date): ${Computer} : CIM Collection failed, or Host no longer available" |
-               Out-File -FilePath $Path\logs\ErrorLog\Connection.log -Append
+               Out-File -FilePath $Path\logs\ErrorLog\Connection.log -Append -Encoding UTF8
         }
     }
     Catch {
         "$(Get-Date): ${Computer} : CIM Connection error" |
-           Out-File -FilePath $Path\logs\ErrorLog\Connection.log -Append
+           Out-File -FilePath $Path\logs\ErrorLog\Connection.log -Append -Encoding UTF8
     }
     Remove-CimSession -ComputerName $Computer
     CleanUp

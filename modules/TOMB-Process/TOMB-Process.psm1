@@ -5,8 +5,8 @@
     be made via WMI(RPC) and finally attempt to connect via CIM(DCOM).
 
     .NOTES
-    DATE:       09 AUG 19
-    VERSION:    1.1.4
+    DATE:       29 AUG 19
+    VERSION:    1.1.5
     AUTHOR:     Brent Matlock -Lyx
          
      .DESCRIPTION
@@ -142,7 +142,6 @@ Function Process-CollectWMI {
 Function Process-CollectCIM {
     $ts = $timestamp
     Try{
-        $Computer = "localhost"
         $SessionOption = New-CimSessionOption -Protocol DCOM
         New-CimSession -ComputerName $Computer -Name $Computer -SessionOption $SessionOption -SkipTestConnection
         $Process_List = $(Get-CimInstance -ComputerName $Computer -ClassName Win32_Process | 

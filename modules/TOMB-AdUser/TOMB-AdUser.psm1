@@ -3,9 +3,9 @@
     Collects user properties, and information from active directory via WinRM.
 
     .NOTES
-    DATE:       26 JUN 19
-    VERSION:    1.1.2b
-    AUTHOR:     Brent Matlock -Lyx
+    DATE:           29 AUG 19
+    VERSION:        1.1.5
+    AUTHOR:         Brent Matlock -Lyx
          
      .DESCRIPTION
     Used to pull user information from Active Directory with WMI (Windows Management Instrumentation) Calls.

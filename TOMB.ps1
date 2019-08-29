@@ -9,9 +9,9 @@
     **For SplunkForwarder setup please read the provided documentation or use the provided Splunk_Setup.ps1 for automated setup.**
     
     .NOTES
-    DATE:       28 AUG 19
-    VERSION:    1.1.4
-    AUTHOR:     Brent Matlock -Lyx
+    DATE:           29 AUG 19
+    VERSION:        1.1.5
+    AUTHOR:         Brent Matlock -Lyx 
 
     .PARAMETER Domain
     Determins if ran against domain objects, or localmachine
@@ -117,22 +117,22 @@ Function Main {
         CredCheck
         $Domain_Computers = $( Get-ADComputer -Filter * -Properties Name, DistinguishedName -Server $Server -SearchBase $Domain | Select-Object DNSHostName )
         Foreach ($Hostx in $Domain_Computers) { ( $Hostx -replace "@{DNSHostName=", "" ) -replace "}", "" | Out-File -FilePath .\includes\tmp\DomainList.txt -Append }
-        Collects #($Computer,$LogID, $Profile)
+        Collects
     }
     #Used to run against listed computer(s)
     If ($Computer) {
-        Collects #($Computer,$LogID, $Profile)
+        Collects
     }
     Else { 
         Collects
     }
 }
 
-Function Collects { #($Computer, $LogID, $Profile) {
+Function Collects {
 If ($null -eq $Thread){ $Threads = 50 }
 If ($Collects -eq "RunAll") { [System.Array]$Collects = "Service","Process","Registry","Signature","SchedTask","EventLog","Connection"}
 If ($null -eq $Computer) {
-    If (!($Domain)){ $ComputerList = $(Get-Content .\includes\tmp\StaticList.txt | Where {$_ -notmatch "^#"}) }
+    If (!($Domain)){ $ComputerList = $(Get-Content .\includes\tmp\StaticList.txt | Where-Object {$_ -notmatch "^#"}) }
     Else { $ComputerList = $(Get-Content .\includes\tmp\DomainList.txt -ErrorAction SilentlyContinue ) } }
 Else { $ComputerList = $Computer }
 Foreach ($Computer in $ComputerList){

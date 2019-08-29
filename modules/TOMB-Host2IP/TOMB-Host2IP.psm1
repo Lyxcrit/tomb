@@ -6,8 +6,8 @@
     Used to correlate hostnames and IP addresses within the target domain. Final product is used within Splunk as a lookup table to associate both.
 
     .NOTES
-    DATE:       26 JUN 19
-    VERSION:    1.1.2b
+    DATE:       29 AUG 19
+    VERSION:    1.1.5
     AUTHOR:     Brent Matlock -Lyx
 
     .PARAMETER Server

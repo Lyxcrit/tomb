@@ -8,14 +8,13 @@
 
 # Project TOMB
 The One Mission Builder (TOMB) is a project used to aid in the collection of artifacts for forwarding into Splunk via SplunkUniversalForwarder. TOMB uses WMI calls against either single host, or a Domain. Modules can be ran via TOMB.ps1 or by themselves once you import the module you wish to use. TOMB utilizes a build and breakdown method which is used in an effort to keep hosts resources free, and avoid overloading of the PSModule.
-### Current Version 1.1.2b
+### Current Version 1.1.5
 
 ## Prerequisits
 ``` 
 * PowerShell Version 2.0+
 * Active Directory (RSAT)
 * SplunkUniversalForwarder 
-* WinRM Enabled
 * Sysmon
 ```
 
@@ -41,9 +40,13 @@ Executing TOMB-Process.psm1 against multiple hosts
 Executing TOMB-Process.psm1 against single host  
 ``` Import-Module .\TOMB-Process.psm1; TOMB-Process -Computer 1.foo.bar```  
 
-## AUTHORS
+## AUTHOR
     Brent Matlock - Lyx
+
+## CONTRIBUTORS
+    Will Flato - sirwilhelm
     Joshua Rohr - jjrohr
+
 ## CONTACT
     If you have a problem, questions, ideas, suggestion or contributing contact us by email:
     Brent.W.Matlock.mil@mail.mil
