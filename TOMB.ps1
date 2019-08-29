@@ -1,4 +1,4 @@
-﻿<#
+<#
     .SYNOPSIS
     Used as the initiator for TOMB execution against Hosts
 
@@ -9,7 +9,7 @@
     **For SplunkForwarder setup please read the provided documentation or use the provided Splunk_Setup.ps1 for automated setup.**
     
     .NOTES
-    DATE:       09 AUG 19
+    DATE:       28 AUG 19
     VERSION:    1.1.4
     AUTHOR:     Brent Matlock -Lyx
 
@@ -53,7 +53,7 @@ Param (
     [ValidateRange(1,500)][Int] $Threads,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String] $Server,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
-    [ValidateSet("Process","Service","Signature","EventLog","SchedTask","Registry","RunAll")][System.Array] $Collects,
+    [ValidateSet("Process","Service","Signature","EventLog","SchedTask","Registry","Connection","RunAll")][System.Array] $Collects,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String] $Method,
     [switch] $Setup
 )
@@ -71,7 +71,8 @@ $IncludeDir\modules\TOMB-Host2IP\TOMB-Host2IP.psm1,
 $IncludeDir\modules\TOMB-Service\TOMB-Service.psm1,
 $IncludeDir\modules\TOMB-Registry\TOMB-Registry.psm1,
 $IncludeDir\modules\TOMB-Signature\TOMB-Signature.psm1,
-$IncludeDir\modules\TOMB-ScheduledTask\TOMB-ScheduledTask.psm1 -Force 
+$IncludeDir\modules\TOMB-Connection\TOMB-Connection.psm1,
+$IncludeDir\modules\TOMB-ScheduledTask\TOMB-ScheduledTask.psm1 -Force
 $CurrentFolder = $IncludeDir
 
 #Set Variable Scoping
@@ -129,7 +130,7 @@ Function Main {
 
 Function Collects { #($Computer, $LogID, $Profile) {
 If ($null -eq $Thread){ $Threads = 50 }
-If ($Collects -eq "RunAll") { [System.Array]$Collects = "Service","Process","Registry","Signature","SchedTask","EventLog"}
+If ($Collects -eq "RunAll") { [System.Array]$Collects = "Service","Process","Registry","Signature","SchedTask","EventLog","Connection"}
 If ($null -eq $Computer) {
     If (!($Domain)){ $ComputerList = $(Get-Content .\includes\tmp\StaticList.txt | Where {$_ -notmatch "^#"}) }
     Else { $ComputerList = $(Get-Content .\includes\tmp\DomainList.txt -ErrorAction SilentlyContinue ) } }
@@ -139,6 +140,12 @@ Foreach ($Computer in $ComputerList){
         While ($(Get-Job -state running).count -ge $Threads){
             Start-Sleep -Milliseconds 50
         }
+        If ($obj -eq "Connection") { 
+            Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Connection, TOMB-Json -Force } `
+                      -ScriptBlock { Param($Computer, $CurrentFolder) 
+                                    Import-Module -DisableNameChecking TOMB-Connection, TOMB-Json -Force
+                                    TOMB-Connection -Computer $Computer -Path $CurrentFolder} `
+                      -ArgumentList $Computer, $CurrentFolder, $Json_Convert, $Method }
         If ($obj -eq "Service") {
             Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Service, TOMB-Json -Force } `
                       -ScriptBlock { Param($Computer, $CurrentFolder, $Json_Convert) 
@@ -188,6 +195,7 @@ Function NonValidCollect {
     "SchedTask:`t`tScheduled Task information from host"
     "Registry:`t`tKey registry collection"
     "EventLog:`t`tWindows Event Logs from host"
+    "Connection:`t`tConnections on host"
     "Host2IP:`t`tGenerates lookup table for splunk dashboard 'Host and IP'"
     "ListAll:`t`tProvide User with this menu"
     "RunAll:`t`t`tRun all previously listed collections"

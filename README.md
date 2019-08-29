@@ -23,6 +23,11 @@ The One Mission Builder (TOMB) is a project used to aid in the collection of art
  
 TOMB does not require installing to run the script, in the future a compile script will be written to setup required file structures. In order to forward collections into Splunk a UniversalForwarder needs to be installed on host that will run these scripts. Technology Add-on(TA) for parsing collection is included under the /includes folder and can be setup via using the -setup command. 
 
+### WinRM Troubleshooting (local machine)
+
+1. First turn on WinRM Service.
+2. Run this command as an admin:
+    a. Enable-PSRemoting -Force -SkipNetworkProfileCheck
 
 ## Usages
 ### Running modules via TOMB.ps1
