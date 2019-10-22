@@ -84,7 +84,7 @@ Function EventParse($Log, $LastRun) {
                 -Name  $eventXML.Event.EventData.Data[$i].name `
                 -Value $eventXML.Event.EventData.Data[$i].'#text'
         }
-        $obj = $($Event | Select-Object *,@{N="EventID";E={$_.Id}}, 
+        $obj = ($Event | Select-Object *,@{N="EventID";E={$_.Id}}, 
                                         @{N="RecordID";E={$_.RecordId}},
                                         @{N="ComputerName";E={$_.MachineName}},
                                         @{N="MD5";E={$_.Hashes -replace "MD5=",""}},
