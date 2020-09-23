@@ -48,7 +48,7 @@ Param (
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.String] $Domain,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Computer,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $LogID,
-    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String] $Profile,
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String] $Evxt_Profile,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
     [ValidateRange(1,500)][Int] $Threads,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String] $Server,
@@ -63,8 +63,7 @@ $IncludeDir = Split-Path -parent $MyInvocation.MyCommand.Path
 
 #Adds the modules to $env:PSModulePath for the session
 $env:PSModulePath += ";$IncludeDir\modules"
-Import-Module -DisableNameChecking ActiveDirectory,
-$IncludeDir\modules\TOMB-Json\TOMB-Json.psm1,
+Import-Module -DisableNameChecking $IncludeDir\modules\TOMB-Json\TOMB-Json.psm1,#ActiveDirectory,
 $IncludeDir\modules\TOMB-Event\TOMB-Event.psm1,
 $IncludeDir\modules\TOMB-Process\TOMB-Process.psm1,
 $IncludeDir\modules\TOMB-Host2IP\TOMB-Host2IP.psm1,
@@ -114,9 +113,9 @@ Function Main {
     }
     #Required parameters for collecting against domain objects
     If ($Domain -and $Server) {
-        CredCheck
-        $Domain_Computers = $( Get-ADComputer -Filter * -Properties Name, DistinguishedName -Server $Server -SearchBase $Domain | Select-Object DNSHostName )
-        Foreach ($Hostx in $Domain_Computers) { ( $Hostx -replace "@{DNSHostName=", "" ) -replace "}", "" | Out-File -FilePath .\includes\tmp\DomainList.txt -Append }
+        #CredCheck
+        #$Domain_Computers = $( Get-ADComputer -Filter * -Properties Name, DistinguishedName -Server $Server -SearchBase $Domain | Select-Object DNSHostName )
+        #Foreach ($Hostx in $Domain_Computers) { ( $Hostx -replace "@{DNSHostName=", "" ) -replace "}", "" | Out-File -FilePath .\includes\tmp\DomainList.txt -Append }
         Collects
     }
     #Used to run against listed computer(s)
@@ -160,10 +159,10 @@ Foreach ($Computer in $ComputerList){
                       -ArgumentList $Computer, $CurrentFolder, $Json_Convert, $Method }
         If ($obj -eq "EventLog") { 
             Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Event, TOMB-Json -Force } `
-                      -ScriptBlock { Param($Computer, $Profile, $CurrentFolder, $Json_Convert) 
+                      -ScriptBlock { Param($Computer, $Evtx_Profile, $CurrentFolder, $Json_Convert) 
                                     Import-Module -DisableNameChecking TOMB-Event, TOMB-Json -Force
-                                    TOMB-Event -Computer $Computer -Profile $Profile -Path $CurrentFolder} `
-                      -ArgumentList $Computer, $Profile, $CurrentFolder, $Json_Convert }
+                                    TOMB-Event -Computer $Computer -Profile $Evtx_Profile -Path $CurrentFolder} `
+                      -ArgumentList $Computer, $Evtx_Profile, $CurrentFolder, $Json_Convert }
         If ($obj -eq "Signature") {
             Start-Job -InitializationScript { Import-Module -DisableNameChecking TOMB-Signature -Force } `
                       -ScriptBlock { Param($Computer, $CurrentFolder) 

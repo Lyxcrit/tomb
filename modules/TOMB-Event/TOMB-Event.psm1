@@ -35,25 +35,23 @@ Param (
     # ComputerName of the host you want to connect to.
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Computer,
     [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][System.Array] $Path,
-    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String] $Profile
+    [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String] $Evtx_Profile
 )
 
 #Build Variable Scope
-$timestamp = [Math]::Floor([decimal](Get-Date(Get-Date).ToUniversalTime()-uformat "%s"))
-$ts = $timestamp
 $(Set-Variable -name Computer -Scope Global) 2>&1 | Out-Null
 $(Set-Variable -name LastRun -Scope Global) 2>&1 | Out-Null
-$(Set-Variable -name Profile -Scope Global) 2>&1 | Out-Null
+$(Set-Variable -name Evtx_Profile -Scope Global) 2>&1 | Out-Null
 $(Set-Variable -name LogID -Scope Global) 2>&1 | Out-Null
 $(Set-Variable -name Path -Scope Global) 2>&1 | Out-Null
 
 #Main Script, collects Eventlogs off hosts and converts the output to Json format in preperation to send to Splunk
-Function TOMB-Event($Computer, $Path, $Profile) {
+Function TOMB-Event($Computer, $Path, $Evtx_Profile) {
     cd $Path
     Try { 
         $ConnectionCheck = $(Test-Connection -Count 1 -ComputerName $Computer -ErrorAction Stop) 
         }
-    #If host is unreachable this is placed into the Errorlog: Process.log
+    #If host is unreachable this is placed into the Errorlog: Windowslog.log
     Catch [System.Net.NetworkInformation.PingException] { 
         "$(Get-Date): Host ${Computer} Status unreachable." | 
         Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append 
@@ -67,44 +65,41 @@ Function TOMB-Event($Computer, $Path, $Profile) {
         Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append
         }
     If ($ConnectionCheck) {
-        EventCollect($Computer, $Profile)
+        EventCollect($Computer, $Evtx_Profile)
     }
 }
+
 
 Function EventParse($Log, $LastRun) {
     $Events = Get-WinEvent -LogName 'System','Security' -FilterXPath "*/System/EventID=$Log" |
               Where-Object -FilterScript { $_.RecordId -gt $LastRun }
-    ForEach ($Event in $Events) {
-        # Convert the event to XML
-        $eventXML = [xml]$Event.ToXml()
-        # Iterate through each one of the XML message properties
-        For ($i=0; $i -lt $eventXML.Event.EventData.Data.Count; $i++) {
-            # Grab properties and append values to each
-            Add-Member -InputObject $Event -MemberType NoteProperty -Force `
-                -Name  $eventXML.Event.EventData.Data[$i].name `
-                -Value $eventXML.Event.EventData.Data[$i].'#text'
-        }
-        $obj = ($Event | Select-Object *,@{N="EventID";E={$_.Id}}, 
-                                        @{N="RecordID";E={$_.RecordId}},
-                                        @{N="ComputerName";E={$_.MachineName}},
-                                        @{N="MD5";E={$_.Hashes -replace "MD5=",""}},
-                                        @{N="SHA1";E={$_.Hashes -replace "SHA1=",""}},
-                                        @{N="SHA256";E={$_.Hashes -replace "SHA256=",""}},
-                                        @{N="Description";E={$_.KeywordsDisplayNames}},
-                                        @{N="ProcessID";E={[Convert]::ToInt64($_.ProcessId,16)}},
-                                        @{N="NewProcessID";E={[Convert]::ToInt64($_.NewProcessId,16)}},
-                                        @{N="SubjectLogonID";E={[Convert]::ToInt64($_.SubjectLogonId,16)}},
-                                        @{N="TargetLogonID";E={[Convert]::ToInt64($_.TargetLogonId,16)}},
-                                        @{N="TimeCreated";E={[DateTime]$_.TimeCreated -replace '\\/'.""}} `
-        -Exclude Message,*Properties,Bookmark,*Keyword*,Matched*,Provider*,ActivityId,Id,Opcode,Version,MachineName,Hashes, `
-                 *ActivityId,Qualifiers,ProcessId,NewProcessId,SubjectLogonId,TimeCreated,RecordId,TargetLogonId)
-    return $obj
-    }        
+    foreach ($Event in $Events) {
+    $eventXML = [xml]$Event.ToXml()
+    for ($i=0; $i -lt $eventXML.Event.EventData.Data.Count; $i++) {
+        Add-Member -InputObject $Event -MemberType NoteProperty -Force `
+            -Name $eventXMl.Event.EventData.Data[$i].name `
+            -Value $eventXML.Event.EventData.Data[$i].'#text'
+    }
+    $Event | Select-Object *,@{N="EventCode";E={$_.Id}}, 
+        @{N="RecordID";E={$_.RecordId}},
+        @{N="ComputerName";E={$_.MachineName}},
+        @{N="MD5";E={$_.Hashes -replace "MD5=",""}},
+        @{N="SHA1";E={$_.Hashes -replace "SHA1=",""}},
+        @{N="SHA256";E={$_.Hashes -replace "SHA256=",""}},
+        @{N="Description";E={$_.KeywordsDisplayNames}},
+        @{N="ProcessID";E={[Convert]::ToInt64($_.ProcessId,16)}},
+        @{N="NewProcessID";E={[Convert]::ToInt64($_.NewProcessId,16)}},
+        @{N="SubjectLogonID";E={[Convert]::ToInt64($_.SubjectLogonId,16)}},
+        @{N="TargetLogonID";E={[Convert]::ToInt64($_.TargetLogonId,16)}},
+        @{N="TimeCreated";E={[DateTime]$_.TimeCreated -replace '\\/'.""}} `
+        -Exclude Message,Bookmark,ActivityId,Id,Opcode,Version,MachineName,Hashes,Properties, `
+        Qualifiers,ProcessId,NewProcessId,SubjectLogonId,TimeCreated,RecordId,TargetLogonId
+    }
 }
 
 Function EventCollect {
-    If (!($Profile)) { $Profile = "Default" }
-    $LogIDs = $(Get-content $Path\includes\EventID_${Profile}.txt | Where-Object {$_ -notmatch "^#"}) 
+    If (!($Evtx_Profile)) { $Evtx_Profile = "Default" }
+    $LogIDs = $(Get-content $Path\includes\EventID_${Evtx_Profile}.txt | Where-Object {$_ -notmatch "^#"}) 
     Foreach ($LogID in $LogIDs) { 
         [string[]]$LogIDx += $LogID -Split("`t") | Select-Object -First 1 
         }
@@ -113,7 +108,7 @@ Function EventCollect {
         $LastRun = (Get-Content -Path $Path\modules\DO_NOT_DELETE\${Computer}_${Log}_timestamp.log -ErrorAction SilentlyContinue)
         If ($LastRun.Length -eq 0) { $LastRun = 1 }
         #Generation of the scriptblock and allows remote machine to read variables being passed.
-        $EventLogFinal = $(Invoke-Command -ComputerName $Computer -ScriptBlock ${function:EventParse} -ErrorVariable Message 2>$Message -ErrorAction Stop -ArgumentList $Log, $LastRun)
+        $EventLogFinal = $(Invoke-Command -ComputerName $Computer -ScriptBlock ${function:EventParse} -ErrorVariable Message 2>$Message -ErrorAction Continue -ArgumentList $Log, $LastRun)
         Try { $EventLogFinal
             #Verify if any collections were made, if not script drops file creation and moves on.
             If ($null -ne $EventLogFinal){
@@ -121,8 +116,10 @@ Function EventCollect {
                     $obj | TOMB-Json -Compress | 
                     Out-File -FilePath $Path\Files2Forward\temp\Events\${Computer}_${Log}_logs.json -Append # -Encoding UTF8
                     $obj.RecordID[0] | Out-File -FilePath $Path\modules\DO_NOT_DELETE\${Computer}_${Log}_timestamp.log
-                    CleanUp
                 }
+            }
+            Else { 
+                Continue
             }
         }
         #Any exception messages that were generated due to error are placed in the Errorlog: Windowslogs.log
@@ -138,13 +135,15 @@ Function EventCollect {
                 "$(Get-Date): Test" | Out-File -FilePath $Path\logs\ErrorLog\windowslog.log -Append
             }
         }
+        CleanUp
     }
 }
 
 Function CleanUp {
     $File = $(Get-Content $Path\Files2Forward\temp\Events\${Computer}_${Log}_logs.json)
-    $File | Out-File -FilePath $Path\Files2Forward\Events\${Computer}_${Log}_${ts}_logs.json -Encoding UTF8
+    $File | Out-File -FilePath $Path\Files2Forward\Events\${Computer}_${Log}_logs.json -Encoding UTF8
     Remove-Item -Path "${Path}\Files2Forward\temp\Events\${Computer}_${Log}_logs.json"
+    Remove-Item -Path "${Path}\No events*"
 }
 
 #Alias registration for deploying with -Collects parameter via TOMB.ps1

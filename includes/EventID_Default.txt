@@ -73,7 +73,7 @@
 #4665	An attempt was made to create an application client context.
 #4666	An application attempted an operation
 #4667	An application client context was deleted
-#4668	An application was initialized
+4668	An application was initialized
 #4670	Permissions on an object were changed
 #4671	An application attempted to access a blocked ordinal through the TBS
 #4672	Special privileges assigned to new logon
