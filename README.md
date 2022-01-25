@@ -49,4 +49,4 @@ Executing TOMB-Process.psm1 against single host
 
 ## CONTACT
     If you have a problem, questions, ideas, suggestion or contributing contact us by email:
-    brent.matlock@splunk.com
+    bmatlock@splunk.com
